@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.linalg
-
 from antenna_element_positions import generate_antenna_element_positions
 from sympy_demo import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
