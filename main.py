@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.linalg
+
+from antenna_element_positions import generate_antenna_element_positions
 from sympy_demo import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
@@ -10,10 +12,11 @@ lmb = c / f
 room_x = [-1.5, 1.5]
 room_y = [-1.5, 1.5]
 room_z = [0, 3]
+multipath_count = 1
 
 # options
 jacobian_type = "numpy"  # "numpy" or "scipy"
-use_multipath = True  # True or False
+use_multipath = False  # True or False
 
 
 def mod_2pi(x):
@@ -27,12 +30,14 @@ def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count)
     tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / c
     phi = -2 * np.pi * f * tau + phi_mix
     s_mix = np.exp(1j * phi)
-
+    multipath_sources = []
     for p in range(multipath_count):
         x = np.random.uniform(room_x[0], room_x[1])
         y = np.random.uniform(room_y[0], room_y[1])
         z = np.random.uniform(room_z[0], room_z[1])
         a = np.random.uniform(0, 0.5)
+        multipath_sources.append({"position": [x, y, z],
+                                  "amplitude": a})
         multipath_source_pos = np.array([[x, y, z]]).T
         tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / c
         phi = -2 * np.pi * f * tau + phi_mix
@@ -41,7 +46,7 @@ def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count)
     total_phi = np.angle(s_mix)
     n = np.random.randn(*total_phi.shape) * sigma_phi
     total_phi = mod_2pi(total_phi + n).reshape((-1, 1))
-    return total_phi
+    return total_phi, multipath_sources
 
 
 def measure(antenna_positions, beacon_pos, sigma_phi):
@@ -106,9 +111,7 @@ def generate_spiral_path(a, theta_extent, alpha):
     return np.array([x, y, z]).reshape((3, -1))
 
 
-antenna_element_positions = np.array(
-    [[0, 0, 0], [2 * lmb, 0, 0], [0, 0, -2 * lmb], [5 * lmb, 0, 0], [0, 0, -5 * lmb], [10 * lmb, 0, 0],
-     [0, 0, -10 * lmb], [10 * lmb, 0, -10 * lmb], [-10 * lmb, 0, 0], [-8 * lmb, 0, -5 * lmb]]).T
+antenna_element_positions = generate_antenna_element_positions(kind="square_4_4", lmb=lmb)
 
 beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
@@ -137,8 +140,9 @@ sigma = np.eye(len(x))
 sigma_phi = 0.01
 sigma_a = 0.1
 A_full = get_A_full(antenna_element_positions)
-i_list = [3, 5]
+i_list = [3, 5, 10]
 jacobian_cache = {}
+multipath_sources = []  # timestep x source_count
 
 for k in range(len(beacon_pos[0])):
     # prediction
@@ -161,8 +165,10 @@ for k in range(len(beacon_pos[0])):
             ant_pos_i.append(ant_pos_m_i)
 
             if use_multipath:
-                phi_m = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=sigma_phi,
-                                          multipath_count=4)
+                phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
+                                                                  sigma_phi=sigma_phi,
+                                                                  multipath_count=multipath_count)
+                multipath_sources.append(multipath_sources_at_k)
             else:
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=sigma_phi)
             phi.append(phi_m)
@@ -210,8 +216,11 @@ for k in range(len(beacon_pos[0])):
     xs.append(x)
 
 xs = np.array(xs).squeeze()
-for x in xs:
+for k, (x, multipath_sources_at_k) in enumerate(zip(xs, multipath_sources)):
+    print("Time step: ", k)
     print(f"x: {x[0]}, y: {x[1]}, z: {x[2]}, vx: {x[3]}, vy: {x[4]}, vz: {x[5]}")
+    for i, multipath_source in enumerate(multipath_sources_at_k):
+        print(f"Source {i}: ", multipath_source)
 # creating an empty canvas
 fig = plt.figure()
 
