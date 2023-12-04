@@ -1,6 +1,6 @@
 import numpy as np
 from config import Parameters as params
-
+import torch
 
 def compute_beampatern(x, N_theta, N_phi, fs, r):
     """
@@ -13,9 +13,8 @@ def compute_beampatern(x, N_theta, N_phi, fs, r):
     :return:
     """
     N_array, N = x.shape
-    x_fft = np.zeros((N_array, N), dtype=complex)
-    for i in range(N_array):
-        x_fft[i, :] = np.fft.fft(x[i, :])
+
+    x_fft = np.fft.fft(x, axis=1)
 
     thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
     phis = np.linspace(-1 * np.pi, np.pi, N_phi)
@@ -38,20 +37,64 @@ def compute_beampatern(x, N_theta, N_phi, fs, r):
     out = np.fft.ifft(out, axis=0)
     output_signals = out.reshape((N_theta, N_phi, -1))
     results = np.mean(np.abs(out) ** 2, axis=0)
-    # for k, theta_sweep in enumerate(thetas):
-    #     for l, phi_sweep in enumerate(phis):
-    #         u_sweep = np.array(
-    #             [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep), np.cos(theta_sweep)]).reshape((3, 1))
-    #
-    #
-    #         v = r.T @ u_sweep
-    #         H = np.exp(-1j * 2 * np.pi * f * v / params.c)
-    #         out = np.sum(x_fft * H, axis=0)
-    #         out /= N_array
-    #         out = np.fft.ifft(out)
-    #         output_signals[k, l, :] = out
-    #         results[k, l] = np.mean(np.abs(out) ** 2)
+
     return results, output_signals, thetas, phis
+
+def compute_beampatern_gpu(x, N_theta, N_phi, fs, r):
+    """
+
+    :param x: input signals (N_array x N)
+    :param N_theta: theta sample number
+    :param fs: sampling freq
+    :param r: antenna positions (3xN np array)
+    :param N_phi: phi sample number
+    :return:
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    N_array, N = x.shape
+
+    x = torch.from_numpy(x)
+    x_fft = torch.fft.fft(x, axis=1)
+
+
+    thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+    phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+    f = torch.fft.fftfreq(N, 1 / fs).reshape((1, -1))
+    # results = np.zeros((N_theta, N_phi))
+    #
+    # output_signals = np.zeros((N_theta, N_phi, N), dtype=np.complex64)
+    theta_sweep, phi_sweep = np.meshgrid(thetas, phis)
+
+    u_sweep = np.array(
+        [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
+         np.cos(theta_sweep)])
+    u_sweep = torch.from_numpy(u_sweep)
+
+
+    r = torch.from_numpy(r)
+    r.type(torch.float32)
+
+
+    v = torch.tensordot(r.T, u_sweep, dims=1)
+    v = torch.unsqueeze(v, dim=1)
+
+    f = torch.unsqueeze(f, dim=2)
+    f = torch.unsqueeze(f, dim=3)
+    u = f * v
+    u = u.to(device)
+
+    H = torch.exp(-1j * 2 * np.pi * u / params.c)
+    x_fft = torch.unsqueeze(x_fft, dim=2)
+    x_fft = torch.unsqueeze(x_fft, dim=3)
+    x_fft = x_fft.to(device)
+    out = torch.sum(x_fft * H, dim=0)
+    out /= N_array
+    out = torch.fft.ifft(out, axis=0)
+    output_signals = out.reshape((N_theta, N_phi, -1))
+    results = torch.mean(torch.abs(out) ** 2, dim=0)
+
+    return results.cpu().numpy(), output_signals.cpu().numpy(), thetas, phis
+
 
 
 def compute_beampatern_orig(x, N_theta, N_phi, fs, r):

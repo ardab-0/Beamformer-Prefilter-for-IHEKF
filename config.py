@@ -11,4 +11,4 @@ class Parameters:
     sigma_a = 1  # m/s**2
     dt = 0.1  # s
     N_theta = 1000
-    N = 1500
+    N = 500

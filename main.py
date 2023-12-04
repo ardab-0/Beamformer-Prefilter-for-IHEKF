@@ -4,7 +4,8 @@ from antenna_element_positions import generate_antenna_element_positions
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
-from beamformer.beamformer import compute_beampatern, spherical_to_cartesian, compute_beampatern_orig
+from beamformer.beamformer import compute_beampatern, spherical_to_cartesian, compute_beampatern_orig, \
+    compute_beampatern_gpu
 from config import Parameters as params
 
 # options
@@ -184,7 +185,7 @@ for k in range(len(beacon_pos[0])):
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
                 s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                   phi_B=phi_B, sigma=0.1)
-                results, output_signals, thetas, phis = compute_beampatern(x=s_m, N_theta=100, N_phi=100, fs=fs,
+                results, output_signals, thetas, phis = compute_beampatern_gpu(x=s_m, N_theta=75, N_phi=75, fs=fs,
                                                                            r=ant_pos_m_i)
 
                 theta_mesh, phi_mesh = np.meshgrid(thetas, phis)
