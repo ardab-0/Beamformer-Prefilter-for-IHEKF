@@ -1,22 +1,23 @@
 import numpy as np
 import scipy.linalg
 from antenna_element_positions import generate_antenna_element_positions
-from sympy_demo import Jacobian_h, jacobian_numpy
+from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
+from beamformer.beamformer import compute_beampatern
+from config import Parameters as params
 
-f = 24e9
-c = 2.998e8
-lmb = c / f
-room_x = [-1.5, 1.5]
-room_y = [-1.5, 1.5]
-room_z = [0, 3]
-multipath_count = 1
+
+
+
 
 # options
 jacobian_type = "numpy"  # "numpy" or "scipy"
 use_multipath = False  # True or False
+antenna_kind= "original" # "original" or "square_4_4"
+# options
 
+np.random.seed(1)
 
 def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
@@ -26,20 +27,20 @@ def mod_2pi(x):
 
 def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count):
     phi_mix = np.random.rand() * 2 * np.pi
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / c
-    phi = -2 * np.pi * f * tau + phi_mix
+    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
+    phi = -2 * np.pi * params.f * tau + phi_mix
     s_mix = np.exp(1j * phi)
     multipath_sources = []
     for p in range(multipath_count):
-        x = np.random.uniform(room_x[0], room_x[1])
-        y = np.random.uniform(room_y[0], room_y[1])
-        z = np.random.uniform(room_z[0], room_z[1])
-        a = np.random.uniform(0, 0.5)
+        x = np.random.uniform(params.room_x[0], params.room_x[1])
+        y = np.random.uniform(params.room_y[0], params.room_y[1])
+        z = np.random.uniform(params.room_z[0], params.room_z[1])
+        a = np.random.uniform(0, 1)
         multipath_sources.append({"position": [x, y, z],
                                   "amplitude": a})
         multipath_source_pos = np.array([[x, y, z]]).T
-        tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / c
-        phi = -2 * np.pi * f * tau + phi_mix
+        tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / params.c
+        phi = -2 * np.pi * params.f * tau + phi_mix
         s_mix += a * np.exp(1j * phi)
 
     total_phi = np.angle(s_mix)
@@ -52,11 +53,20 @@ def measure(antenna_positions, beacon_pos, sigma_phi):
     # random phase offset for receiver
     phi_mix = np.random.rand() * 2 * np.pi
     # phi_mix = 0
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / c
+    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
 
     n = np.random.randn(*tau.shape) * sigma_phi
-    phi = mod_2pi(-2 * np.pi * f * tau + phi_mix + n).reshape((-1, 1))
+    phi = mod_2pi(-2 * np.pi * params.f * tau + phi_mix + n).reshape((-1, 1))
     return phi
+
+def measure_s_m(t, antenna_positions, beacon_pos, phi_B, sigma):
+    x = 0
+    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
+    phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
+    x = np.exp(1j * phi)
+    N = len(tau)
+    n = np.random.randn(*x.shape) + 1j * np.random.randn(*x.shape)
+    return x + sigma * n
 
 
 def compute_G(dt):
@@ -110,7 +120,7 @@ def generate_spiral_path(a, theta_extent, alpha):
     return np.array([x, y, z]).reshape((3, -1))
 
 
-antenna_element_positions = generate_antenna_element_positions(kind="square_4_4", lmb=lmb)
+antenna_element_positions = generate_antenna_element_positions(kind=antenna_kind, lmb=params.lmb)
 
 beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
@@ -134,26 +144,25 @@ antenna_position_list = [ant1_pos, ant2_pos, ant3_pos]
 # initial state
 xs = []
 x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).T
-dt = 0.1
-sigma = np.eye(len(x))
-sigma_phi = 0.01
-sigma_a = 0.1
+sigma = np.eye(len(x)) # try individual values
 A_full = get_A_full(antenna_element_positions)
-i_list = [3, 5, 10]
 jacobian_cache = {}
 multipath_sources = []  # timestep x source_count
+fs = 100 * params.f
+t = np.arange(params.N) / fs
 
 for k in range(len(beacon_pos[0])):
     # prediction
-    G = compute_G(dt)
-    Q = sigma_a ** 2 * G @ G.T
-    F = compute_F(dt)
+    G = compute_G(params.dt)
+    Q = params.sigma_a ** 2 * G @ G.T
+    F = compute_F(params.dt)
     x = F @ x
     sigma = F @ sigma @ F.T + Q
+    phi_B = np.random.rand() * 2 * np.pi # transmitter phase at time k
 
     # iteration
     x_0 = x
-    for i in i_list:
+    for i in params.i_list:
         ant_pos_i = []
         A = []
         R = []
@@ -165,17 +174,32 @@ for k in range(len(beacon_pos[0])):
 
             if use_multipath:
                 phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
-                                                                  sigma_phi=sigma_phi,
-                                                                  multipath_count=multipath_count)
+                                                                  sigma_phi=params.sigma_phi,
+                                                                  multipath_count=params.multipath_count)
                 multipath_sources.append(multipath_sources_at_k)
             else:
-                phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=sigma_phi)
+                phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
+                s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)), phi_B=phi_B, sigma=0.1)
+                results, output_signals, thetas = compute_beampatern(x=s_m, N_theta=1000, fs=fs, r=ant_pos_m_i)
+
+                plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
+                plt.xlabel("Theta [Degrees]")
+                plt.ylabel("DOA Metric")
+                plt.grid()
+
+                fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+                ax.plot(thetas, results)  # MAKE SURE TO USE RADIAN FOR POLAR
+                ax.set_theta_zero_location('N')  # make 0 degrees point up
+                ax.set_theta_direction(-1)  # increase clockwise
+                ax.set_rlabel_position(22.5)  # Move grid labels away from other labels
+                plt.show()
+                print("here")
             phi.append(phi_m)
 
             A_m = A_full[: i - 1, : i]
             A.append(A_m.tolist())
 
-            R_m = sigma_phi ** 2 * A_m @ A_m.T
+            R_m = params.sigma_phi ** 2 * A_m @ A_m.T
             R.append(R_m.tolist())
 
             h_m = measure(ant_pos_m_i, x[:3].reshape((-1, 1)), sigma_phi=0)
@@ -193,14 +217,14 @@ for k in range(len(beacon_pos[0])):
         if jacobian_type == "scipy":
             if i not in jacobian_cache:
                 # use scipy implementation of jacobian (slow)
-                h_jacobian = Jacobian_h(N=A.shape[0], I=A.shape[1], w0=2 * np.pi * f, c=c)
+                h_jacobian = Jacobian_h(N=A.shape[0], I=A.shape[1], w0=2 * np.pi * params.f, c=params.c)
                 jacobian_cache[i] = h_jacobian
                 h_jacobian.compute_jacobian()
                 H = h_jacobian.evaluate_jacobian(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i)
             else:
                 H = jacobian_cache[i].evaluate_jacobian(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i)
         elif jacobian_type == "numpy":
-            H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=c, w0=2 * np.pi * f)
+            H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=c, w0=2 * np.pi * params.f)
         else:
             raise ValueError('jacobian_type is incorrect.')
 
@@ -224,9 +248,9 @@ for k, (x, multipath_sources_at_k) in enumerate(zip(xs, multipath_sources)):
 fig = plt.figure()
 
 ax = plt.axes(projection="3d")
-ax.set_xlim(room_x)
-ax.set_ylim(room_y)
-ax.set_zlim(room_z)
+ax.set_xlim(params.room_x)
+ax.set_ylim(params.room_y)
+ax.set_zlim(params.room_z)
 
 ax.set_xlabel("x(m)")
 ax.set_ylabel("y(m)")
