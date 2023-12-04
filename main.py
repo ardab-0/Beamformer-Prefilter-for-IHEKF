@@ -11,7 +11,7 @@ from config import Parameters as params
 # options
 jacobian_type = "numpy"  # "numpy" or "scipy"
 use_multipath = False  # True or False
-antenna_kind = "square_4_4"  # "original" or "square_4_4"
+antenna_kind = "square_4_4"  # "original" or "square_4_4" or "irregular_4_4"
 # options
 
 np.random.seed(1)
