@@ -6,7 +6,7 @@ class Parameters:
     room_y = [-1.5, 1.5]  # m
     room_z = [0, 3]  # m
     multipath_count = 0
-    i_list = [3, 5, 10]  # antenna number to include at each iteration
+    i_list = [16]  # antenna number to include at each iteration
     sigma_phi = 0.17  # 10 deg
     sigma_a = 1  # m/s**2
     dt = 0.1  # s

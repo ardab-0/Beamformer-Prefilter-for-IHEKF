@@ -4,20 +4,17 @@ from antenna_element_positions import generate_antenna_element_positions
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
-from beamformer.beamformer import compute_beampatern
+from beamformer.beamformer import compute_beampatern, spherical_to_cartesian, compute_beampatern_orig
 from config import Parameters as params
-
-
-
-
 
 # options
 jacobian_type = "numpy"  # "numpy" or "scipy"
 use_multipath = False  # True or False
-antenna_kind= "original" # "original" or "square_4_4"
+antenna_kind = "square_4_4"  # "original" or "square_4_4"
 # options
 
 np.random.seed(1)
+
 
 def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
@@ -58,6 +55,7 @@ def measure(antenna_positions, beacon_pos, sigma_phi):
     n = np.random.randn(*tau.shape) * sigma_phi
     phi = mod_2pi(-2 * np.pi * params.f * tau + phi_mix + n).reshape((-1, 1))
     return phi
+
 
 def measure_s_m(t, antenna_positions, beacon_pos, phi_B, sigma):
     x = 0
@@ -139,12 +137,13 @@ R3 = r3.as_matrix()
 t3 = np.array([[-0.5, 1.5, 3]]).T
 ant3_pos = R3 @ antenna_element_positions + t3
 
+antenna_transform_list = [{"R": R1, "t": t1}, {"R": R2, "t": t2}, {"R": R3, "t": t3}]
 antenna_position_list = [ant1_pos, ant2_pos, ant3_pos]
 
 # initial state
 xs = []
 x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).T
-sigma = np.eye(len(x)) # try individual values
+sigma = np.eye(len(x))  # try individual values
 A_full = get_A_full(antenna_element_positions)
 jacobian_cache = {}
 multipath_sources = []  # timestep x source_count
@@ -158,7 +157,7 @@ for k in range(len(beacon_pos[0])):
     F = compute_F(params.dt)
     x = F @ x
     sigma = F @ sigma @ F.T + Q
-    phi_B = np.random.rand() * 2 * np.pi # transmitter phase at time k
+    phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k
 
     # iteration
     x_0 = x
@@ -168,7 +167,11 @@ for k in range(len(beacon_pos[0])):
         R = []
         h = []
         phi = []
-        for ant_pos in antenna_position_list:
+
+        # to visualize beam pattern at each step
+        cartesian_beampattern_list = []
+
+        for ant_pos, antenna_transform in zip(antenna_position_list, antenna_transform_list):
             ant_pos_m_i = ant_pos[:, : i]
             ant_pos_i.append(ant_pos_m_i)
 
@@ -179,21 +182,20 @@ for k in range(len(beacon_pos[0])):
                 multipath_sources.append(multipath_sources_at_k)
             else:
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
-                s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)), phi_B=phi_B, sigma=0.1)
-                results, output_signals, thetas = compute_beampatern(x=s_m, N_theta=1000, fs=fs, r=ant_pos_m_i)
+                s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
+                                  phi_B=phi_B, sigma=0.1)
+                results, output_signals, thetas, phis = compute_beampatern(x=s_m, N_theta=100, N_phi=100, fs=fs,
+                                                                           r=ant_pos_m_i)
 
-                plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
-                plt.xlabel("Theta [Degrees]")
-                plt.ylabel("DOA Metric")
-                plt.grid()
+                theta_mesh, phi_mesh = np.meshgrid(thetas, phis)
+                rs = np.array(results).reshape((-1, 1))
+                thetas = theta_mesh.reshape((-1, 1))
+                phis = phi_mesh.reshape((-1, 1))
+                beampattern_cartesian = spherical_to_cartesian(rs, theta=thetas, phi=phis)
+                beampattern_cartesian = beampattern_cartesian + antenna_transform[
+                    "t"]  # place the pattern on antenna position
+                cartesian_beampattern_list.append(beampattern_cartesian)
 
-                fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-                ax.plot(thetas, results)  # MAKE SURE TO USE RADIAN FOR POLAR
-                ax.set_theta_zero_location('N')  # make 0 degrees point up
-                ax.set_theta_direction(-1)  # increase clockwise
-                ax.set_rlabel_position(22.5)  # Move grid labels away from other labels
-                plt.show()
-                print("here")
             phi.append(phi_m)
 
             A_m = A_full[: i - 1, : i]
@@ -204,6 +206,25 @@ for k in range(len(beacon_pos[0])):
 
             h_m = measure(ant_pos_m_i, x[:3].reshape((-1, 1)), sigma_phi=0)
             h.append(h_m)
+
+        ################################### visualize beampatterns
+        fig = plt.figure()
+        ax = plt.axes(projection="3d")
+        ax.set_xlim(params.room_x)
+        ax.set_ylim(params.room_y)
+        ax.set_zlim(params.room_z)
+
+        ax.set_xlabel("x(m)")
+        ax.set_ylabel("y(m)")
+        ax.set_zlabel("z(m)")
+        for beampattern in cartesian_beampattern_list:
+            ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
+        ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
+        ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
+        plt.show()
+        ################################### visualize beampatterns
+
+
 
         ant_pos_i = np.hstack(ant_pos_i)
         phi = np.vstack(phi)
@@ -224,7 +245,8 @@ for k in range(len(beacon_pos[0])):
             else:
                 H = jacobian_cache[i].evaluate_jacobian(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i)
         elif jacobian_type == "numpy":
-            H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=c, w0=2 * np.pi * params.f)
+            H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=params.c,
+                               w0=2 * np.pi * params.f)
         else:
             raise ValueError('jacobian_type is incorrect.')
 
