@@ -92,11 +92,38 @@ def compute_beampatern(x):
     return results, output_signals, thetas
 
 
+def __compute_beampatern_cpu_np(x, phi=0):
+    N_array, N = x.shape
+
+    x_fft = np.fft.fft(x, axis=1)
+
+    thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+    f = np.fft.fftfreq(N, 1 / fs).reshape((1, -1))
+    # results = np.zeros((N_theta, N_phi))
+    #
+    # output_signals = np.zeros((N_theta, N_phi, N), dtype=np.complex64)
+    u_sweep = np.array(
+        [np.sin(thetas) * np.cos(phi), np.sin(thetas) * np.sin(phi),
+         np.cos(thetas)])
+
+    v = np.tensordot(r, u_sweep, axes=1)
+    v = np.expand_dims(v, axis=1)
+    f = np.expand_dims(f, axis=(2))
+    H = np.exp(-1j * 2 * np.pi * f * v / c)
+    x_fft = np.expand_dims(x_fft, axis=(2))
+    out = np.sum(x_fft * H, axis=0)
+    out /= N_array
+    out = np.fft.ifft(out, axis=0)
+    output_signals = out.T
+    results = np.mean(np.abs(out) ** 2, axis=0)
+
+    return results, output_signals, thetas
+
 # compute signal at antenna elements
 for i in range(N_array):
     x[i, :] = array_signal_multiple_source(t, f_list, u_list, a_list, r[i])
 
-results, output_signals, thetas = compute_beampatern(x)
+results, output_signals, thetas = __compute_beampatern_cpu_np(x)
 
 real_out = output_signals.real
 results = np.array(results)
@@ -115,10 +142,10 @@ m = output_signals[sorted_maxima[0]]
 
 plt.plot(output_signals[sorted_maxima[0]].real, label="0")
 plt.plot(output_signals[sorted_maxima[1]].real, label="1")
-plt.plot(x[0, :].real, label="ant0")
-plt.plot(x[1, :].real, label="ant1")
-plt.plot(x[2, :].real, label="ant2")
-plt.plot(x[3, :].real, label="ant3")
+# plt.plot(x[0, :].real, label="ant0")
+# plt.plot(x[1, :].real, label="ant1")
+# plt.plot(x[2, :].real, label="ant2")
+# plt.plot(x[3, :].real, label="ant3")
 
 plt.legend()
 plt.figure()
@@ -146,7 +173,7 @@ for i in range(N_array):
 
 filtered_x = x - signal_to_remove_at_antenna
 
-results, output_signals, thetas = compute_beampatern(filtered_x)
+results, output_signals, thetas = __compute_beampatern_cpu_np(filtered_x)
 
 plt.figure()
 plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
