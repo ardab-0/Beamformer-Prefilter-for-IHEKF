@@ -58,9 +58,8 @@ class Beamformer:
         out = np.sum(x_fft * H, axis=0)
         out /= N_array
         out = np.fft.ifft(out, axis=0)
-        output_signals = out.reshape((N_theta, N_phi, -1))
+        output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
-
         return results, output_signals, thetas, phis
 
     def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
@@ -104,7 +103,7 @@ class Beamformer:
         out = torch.sum(x_fft * H, dim=0)
         out /= N_array
         out = torch.fft.ifft(out, axis=0)
-        output_signals = out.reshape((N_theta, N_phi, -1))
+        output_signals = torch.permute(out, (1, 2, 0))
         results = torch.mean(torch.abs(out) ** 2, dim=0)
 
         return results.cpu().numpy(), output_signals.cpu().numpy(), thetas, phis
