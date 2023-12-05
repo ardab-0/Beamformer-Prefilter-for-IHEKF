@@ -21,6 +21,6 @@ def generate_antenna_element_positions(kind: str, lmb: float) -> np.ndarray:
              [0, 0, -2 * lmb / 2], [lmb / 2, 0, -2 * lmb / 2], [2 * lmb / 2, 0, -2 * lmb / 2],
              [3 * lmb / 2, 0, -2 * lmb / 2],
              [0, 0, -3*lmb / 2], [12*lmb , 0, -3 * lmb / 2], [24 * lmb / 2, 0, -3 * lmb / 2],
-             [15000 * lmb / 2, 0, -3 * lmb / 2]]).T
+             [48 * lmb / 2, 0, -3 * lmb / 2]]).T
     else:
         raise ValueError("Wrong antenna kind.")

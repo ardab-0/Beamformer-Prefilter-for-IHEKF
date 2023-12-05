@@ -6,12 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 from beamformer.beamformer import Beamformer
 from config import Parameters as params
-
-# options
-jacobian_type = "numpy"  # "numpy" or "scipy"
-use_multipath = True  # True or False
-antenna_kind = "square_4_4"  # "original" or "square_4_4" or "irregular_4_4"
-# options
+from matplotlib import cm
 
 np.random.seed(1)
 
@@ -153,7 +148,7 @@ def generate_spiral_path(a, theta_extent, alpha):
     return np.array([x, y, z]).reshape((3, -1))
 
 
-antenna_element_positions = generate_antenna_element_positions(kind=antenna_kind, lmb=params.lmb)
+antenna_element_positions = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb)
 
 beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
@@ -205,12 +200,13 @@ for k in range(len(beacon_pos[0])):
 
         # to visualize beam pattern at each step
         cartesian_beampattern_list = []
+        beampattern_2d_list = []
 
         for ant_pos, antenna_transform in zip(antenna_position_list, antenna_transform_list):
             ant_pos_m_i = ant_pos[:, : i]
             ant_pos_i.append(ant_pos_m_i)
 
-            if use_multipath:
+            if params.use_multipath:
                 phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
                                                                   sigma_phi=params.sigma_phi,
                                                                   multipath_count=params.multipath_count)
@@ -218,10 +214,13 @@ for k in range(len(beacon_pos[0])):
                 s_m = measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
                                             beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                             phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
-                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=75, N_phi=75,
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
                                                                                        fs=fs,
                                                                                        r=ant_pos_m_i)
-
+                results = np.sqrt(results) # power to amplitude conversion
+                beampattern_2d_list.append({"results": results,
+                                            "thetas": thetas,
+                                            "phis": phis})
                 beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
                 beampattern_cartesian = beampattern_cartesian + antenna_transform[
                     "t"]  # place the pattern on antenna position
@@ -230,10 +229,13 @@ for k in range(len(beacon_pos[0])):
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
                 s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                   phi_B=phi_B, sigma=0.1)
-                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=75, N_phi=75,
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
                                                                                        fs=fs,
                                                                                        r=ant_pos_m_i)
-
+                results = np.sqrt(results) # power to amplitude conversion
+                beampattern_2d_list.append({"results": results,
+                                            "thetas": thetas,
+                                            "phis": phis})
                 beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
                 beampattern_cartesian = beampattern_cartesian + antenna_transform[
                     "t"]  # place the pattern on antenna position
@@ -264,6 +266,22 @@ for k in range(len(beacon_pos[0])):
             ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
         ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
         ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
+
+        fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
+        for i, beampattern_2d in enumerate(beampattern_2d_list):
+            plt.subplot(2, 2, i+1)
+            thetas = beampattern_2d["thetas"]
+            phis = beampattern_2d["phis"]
+            thetas, phis = np.meshgrid(thetas, phis)
+            r = beampattern_2d["results"]
+            surf = ax[i//2, i%2].plot_surface(thetas/np.pi*180, phis/np.pi*180, r, cmap=cm.coolwarm,
+                                   linewidth=0, antialiased=False)
+            ax[i // 2, i % 2].set_xlabel("theta (rad)")
+            ax[i // 2, i % 2].set_ylabel("phi (rad)")
+            ax[i // 2, i % 2].set_zlabel("power")
+            # Add a color bar which maps values to colors.
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+
         plt.show()
         ################################### visualize beampatterns
 
@@ -276,7 +294,7 @@ for k in range(len(beacon_pos[0])):
         z = A @ phi
         h = mod_2pi(A @ h)
 
-        if jacobian_type == "scipy":
+        if params.jacobian_type == "scipy":
             if i not in jacobian_cache:
                 # use scipy implementation of jacobian (slow)
                 h_jacobian = Jacobian_h(N=A.shape[0], I=A.shape[1], w0=2 * np.pi * params.f, c=params.c)
@@ -285,7 +303,7 @@ for k in range(len(beacon_pos[0])):
                 H = h_jacobian.evaluate_jacobian(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i)
             else:
                 H = jacobian_cache[i].evaluate_jacobian(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i)
-        elif jacobian_type == "numpy":
+        elif params.jacobian_type == "numpy":
             H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=params.c,
                                w0=2 * np.pi * params.f)
         else:

@@ -39,7 +39,7 @@ class Beamformer:
 
         x_fft = np.fft.fft(x, axis=1)
 
-        thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+        thetas = np.linspace(0, np.pi, N_theta)
         phis = np.linspace(-1 * np.pi, np.pi, N_phi)
         f = np.fft.fftfreq(N, 1 / fs).reshape((1, -1))
         # results = np.zeros((N_theta, N_phi))
@@ -70,7 +70,7 @@ class Beamformer:
         x_fft = torch.fft.fft(x, axis=1)
 
 
-        thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+        thetas = np.linspace(0, np.pi, N_theta)
         phis = np.linspace(-1 * np.pi, np.pi, N_phi)
         f = torch.fft.fftfreq(N, 1 / fs).reshape((1, -1))
         # results = np.zeros((N_theta, N_phi))
@@ -116,7 +116,7 @@ class Beamformer:
         for i in range(N_array):
             x_fft[i, :] = np.fft.fft(x[i, :])
 
-        thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+        thetas = np.linspace(0, np.pi, N_theta)
         phis = np.linspace(-1 * np.pi, np.pi, N_phi)
         f = np.fft.fftfreq(N, 1 / fs)
         results = np.zeros((N_theta, N_phi))
