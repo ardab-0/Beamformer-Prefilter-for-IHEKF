@@ -4,9 +4,26 @@ import torch
 
 class Beamformer:
     def __init__(self, type):
+        """
+        3D beamformer
+        :param type: "cpu_np" or "gpu" or "cpu"
+        """
         self.type = type
 
     def compute_beampattern(self, x, N_theta, N_phi, fs, r):
+        """
+
+        :param x: input signals, shape:(N_array, N)
+        :param N_theta: theta sample number
+        :param fs: sampling freq
+        :param r: antenna positions, shape: (3,N)
+        :param N_phi: phi sample number
+        :return: (  results: signal power at (theta, phi), shape: (N_theta, N_phi),
+                    output_signals: signal at (theta, phi), shape: (N_theta, N_phi, N),
+                    thetas: shape: (N_theta,),
+                    phis: shape: (N_phi,)
+                )
+        """
         if self.type == "cpu_np":
             return self.__compute_beampatern_cpu_np(x, N_theta, N_phi, fs, r)
         elif self.type == "gpu":
@@ -18,15 +35,6 @@ class Beamformer:
 
 
     def __compute_beampatern_cpu_np(self, x, N_theta, N_phi, fs, r):
-        """
-
-        :param x: input signals (N_array x N)
-        :param N_theta: theta sample number
-        :param fs: sampling freq
-        :param r: antenna positions (3xN np array)
-        :param N_phi: phi sample number
-        :return:
-        """
         N_array, N = x.shape
 
         x_fft = np.fft.fft(x, axis=1)
@@ -56,15 +64,6 @@ class Beamformer:
         return results, output_signals, thetas, phis
 
     def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
-        """
-
-        :param x: input signals (N_array x N)
-        :param N_theta: theta sample number
-        :param fs: sampling freq
-        :param r: antenna positions (3xN np array)
-        :param N_phi: phi sample number
-        :return:
-        """
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         N_array, N = x.shape
 
@@ -113,15 +112,6 @@ class Beamformer:
 
 
     def __compute_beampatern_cpu(self, x, N_theta, N_phi, fs, r):
-        """
-
-        :param x: input signals (N_array x N)
-        :param N_theta: theta sample number
-        :param fs: sampling freq
-        :param r: antenna positions (3xN np array)
-        :param N_phi: phi sample number
-        :return:
-        """
         N_array, N = x.shape
         x_fft = np.zeros((N_array, N), dtype=complex)
         for i in range(N_array):
@@ -150,6 +140,13 @@ class Beamformer:
 
 
     def spherical_to_cartesian(self, results, thetas, phis):
+        """
+
+        :param results: signal power at (theta, phi), shape: (N_theta, N_phi)
+        :param thetas: shape: (N_theta, )
+        :param phis: shape: (N_phi, )
+        :return: cartesian pointcloud data shape: (3, N_theta x N_phi)
+        """
         theta_mesh, phi_mesh = np.meshgrid(thetas, phis)
         r = np.array(results).reshape((-1, 1))
         theta = theta_mesh.reshape((-1, 1))

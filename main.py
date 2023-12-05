@@ -9,7 +9,7 @@ from config import Parameters as params
 
 # options
 jacobian_type = "numpy"  # "numpy" or "scipy"
-use_multipath = False  # True or False
+use_multipath = True  # True or False
 antenna_kind = "square_4_4"  # "original" or "square_4_4" or "irregular_4_4"
 # options
 
@@ -65,6 +65,41 @@ def measure_s_m(t, antenna_positions, beacon_pos, phi_B, sigma):
     N = len(tau)
     n = np.random.randn(*x.shape) + 1j * np.random.randn(*x.shape)
     return x + sigma * n
+
+
+def measure_s_m_multipath(t, antenna_positions, beacon_pos, phi_B, sigma, multipath_sources):
+    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
+    phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
+    s_m = np.exp(1j * phi)
+
+    for p, source in enumerate(multipath_sources):
+        x = source["x"]
+        y = source["y"]
+        z = source["z"]
+        a = source["a"]
+        multipath_source_pos = np.array([[x, y, z]]).T
+        tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / params.c
+        phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
+        s_m += a * np.exp(1j * phi)
+        print(f"Multipath {p}: a:{a}, x:{x}, y:{y}, z:{z}")
+
+    n = np.random.randn(*s_m.shape) + 1j * np.random.randn(*s_m.shape)
+    return s_m + sigma * n
+
+
+def generate_multipath_sources(multipath_count):
+    sources = []
+    for p in range(multipath_count):
+        x = np.random.uniform(params.room_x[0], params.room_x[1])
+        y = np.random.uniform(params.room_y[0], params.room_y[1])
+        z = np.random.uniform(params.room_z[0], params.room_z[1])
+        a = np.random.uniform(0, 1)
+        sources.append({"a": a,
+                        "x": x,
+                        "y": y,
+                        "z": z})
+
+    return sources
 
 
 def compute_G(dt):
@@ -146,7 +181,6 @@ x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).
 sigma = np.eye(len(x))  # try individual values
 A_full = get_A_full(antenna_element_positions)
 jacobian_cache = {}
-multipath_sources = []  # timestep x source_count
 fs = 100 * params.f
 t = np.arange(params.N) / fs
 beamformer = Beamformer(type="gpu")
@@ -159,7 +193,7 @@ for k in range(len(beacon_pos[0])):
     x = F @ x
     sigma = F @ sigma @ F.T + Q
     phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k
-
+    multipath_sources = generate_multipath_sources(multipath_count=params.multipath_count)
     # iteration
     x_0 = x
     for i in params.i_list:
@@ -180,13 +214,25 @@ for k in range(len(beacon_pos[0])):
                 phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
                                                                   sigma_phi=params.sigma_phi,
                                                                   multipath_count=params.multipath_count)
-                multipath_sources.append(multipath_sources_at_k)
+
+                s_m = measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
+                                            beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
+                                            phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=75, N_phi=75,
+                                                                                       fs=fs,
+                                                                                       r=ant_pos_m_i)
+
+                beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
+                beampattern_cartesian = beampattern_cartesian + antenna_transform[
+                    "t"]  # place the pattern on antenna position
+                cartesian_beampattern_list.append(beampattern_cartesian)
             else:
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
                 s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                   phi_B=phi_B, sigma=0.1)
-                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=75, N_phi=75, fs=fs,
-                                                                           r=ant_pos_m_i)
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=75, N_phi=75,
+                                                                                       fs=fs,
+                                                                                       r=ant_pos_m_i)
 
                 beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
                 beampattern_cartesian = beampattern_cartesian + antenna_transform[
@@ -220,8 +266,6 @@ for k in range(len(beacon_pos[0])):
         ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
         plt.show()
         ################################### visualize beampatterns
-
-
 
         ant_pos_i = np.hstack(ant_pos_i)
         phi = np.vstack(phi)
@@ -257,12 +301,12 @@ for k in range(len(beacon_pos[0])):
 
     xs.append(x)
 
-xs = np.array(xs).squeeze()
-for k, (x, multipath_sources_at_k) in enumerate(zip(xs, multipath_sources)):
-    print("Time step: ", k)
-    print(f"x: {x[0]}, y: {x[1]}, z: {x[2]}, vx: {x[3]}, vy: {x[4]}, vz: {x[5]}")
-    for i, multipath_source in enumerate(multipath_sources_at_k):
-        print(f"Source {i}: ", multipath_source)
+# xs = np.array(xs).squeeze()
+# for k, (x, multipath_sources_at_k) in enumerate(zip(xs, multipath_sources)):
+#     print("Time step: ", k)
+#     print(f"x: {x[0]}, y: {x[1]}, z: {x[2]}, vx: {x[3]}, vy: {x[4]}, vz: {x[5]}")
+#     for i, multipath_source in enumerate(multipath_sources_at_k):
+#         print(f"Source {i}: ", multipath_source)
 # creating an empty canvas
 fig = plt.figure()
 
