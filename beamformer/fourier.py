@@ -2,7 +2,7 @@ import numpy as np
 from config import Parameters as params
 import torch
 
-class Beamformer:
+class FourierBeamformer:
     def __init__(self, type):
         """
         3D beamformer

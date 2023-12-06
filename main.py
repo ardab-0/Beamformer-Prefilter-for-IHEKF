@@ -1,10 +1,12 @@
 import numpy as np
 import scipy.linalg
 from antenna_element_positions import generate_antenna_element_positions
+from beamformer.capon import CaponBeamformer
+from beamformer.music import MusicBeamformer
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
-from beamformer.beamformer import Beamformer
+from beamformer.fourier import FourierBeamformer
 from config import Parameters as params
 from matplotlib import cm
 
@@ -178,7 +180,7 @@ A_full = get_A_full(antenna_element_positions)
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = Beamformer(type="gpu")
+beamformer = CaponBeamformer(type="cpu")
 
 for k in range(len(beacon_pos[0])):
     # prediction
@@ -217,7 +219,7 @@ for k in range(len(beacon_pos[0])):
                 results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
                                                                                        fs=fs,
                                                                                        r=ant_pos_m_i)
-                results = np.sqrt(results) # power to amplitude conversion
+                # results = np.sqrt(results) # power to amplitude conversion
                 beampattern_2d_list.append({"results": results,
                                             "thetas": thetas,
                                             "phis": phis})
@@ -232,7 +234,7 @@ for k in range(len(beacon_pos[0])):
                 results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
                                                                                        fs=fs,
                                                                                        r=ant_pos_m_i)
-                results = np.sqrt(results) # power to amplitude conversion
+                # results = np.sqrt(results) # power to amplitude conversion
                 beampattern_2d_list.append({"results": results,
                                             "thetas": thetas,
                                             "phis": phis})
