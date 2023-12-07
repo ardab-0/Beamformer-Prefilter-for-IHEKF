@@ -9,6 +9,7 @@ from scipy.spatial.transform import Rotation as R
 from beamformer.fourier import FourierBeamformer
 from config import Parameters as params
 from matplotlib import cm
+from scipy.signal import argrelextrema
 
 np.random.seed(1)
 
@@ -150,6 +151,37 @@ def generate_spiral_path(a, theta_extent, alpha):
     return np.array([x, y, z]).reshape((3, -1))
 
 
+def compute_phase_shift(x, f, u, r):
+    return x * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)
+
+
+def remove_components(x, r, results, phi, thetas, output_signals):
+    filtered_x = x.copy()
+    N_array = len(r)
+    thetas = np.squeeze(thetas)
+    results = np.squeeze(results)
+    maxima = argrelextrema(results, np.greater)[0]
+    max_val = results[maxima]
+
+    max_val = max_val[:int(len(max_val) / 2)]
+    arg_max_val = max_val.argsort()[::-1]
+
+    sorted_maxima = maxima[arg_max_val]
+
+    for k in range(1, len(sorted_maxima)):
+        theta_to_remove = thetas[sorted_maxima[k]]
+        u = np.array(
+            [np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
+        signal_to_remove = output_signals[sorted_maxima[k]]
+
+        signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
+        for i in range(N_array):
+            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[i])
+
+        filtered_x -= signal_to_remove_at_antenna
+    return filtered_x
+
+
 antenna_element_positions = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb)
 
 beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
@@ -180,7 +212,7 @@ A_full = get_A_full(antenna_element_positions)
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = CaponBeamformer(type="cpu")
+beamformer = FourierBeamformer(type="gpu")
 
 for k in range(len(beacon_pos[0])):
     # prediction
@@ -212,36 +244,43 @@ for k in range(len(beacon_pos[0])):
                 phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
                                                                   sigma_phi=params.sigma_phi,
                                                                   multipath_count=params.multipath_count)
-
-                s_m = measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
-                                            beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                            phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
-                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
-                                                                                       fs=fs,
-                                                                                       r=ant_pos_m_i)
-                # results = np.sqrt(results) # power to amplitude conversion
-                beampattern_2d_list.append({"results": results,
-                                            "thetas": thetas,
-                                            "phis": phis})
-                beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                beampattern_cartesian = beampattern_cartesian + antenna_transform[
-                    "t"]  # place the pattern on antenna position
-                cartesian_beampattern_list.append(beampattern_cartesian)
+                if params.visualize_beampatterns:
+                    s_m = measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
+                                                beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
+                                                phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
+                    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=1000, N_phi=1,
+                                                                                           fs=fs,
+                                                                                           r=ant_pos_m_i)
+                    # results = np.sqrt(results) # power to amplitude conversion
+                    beampattern_2d_list.append({"results": results,
+                                                "thetas": thetas,
+                                                "phis": phis,
+                                                "ant_pos": ant_pos_m_i,
+                                                "s_m": s_m,
+                                                "output_signals": output_signals})
+                    beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
+                    beampattern_cartesian = beampattern_cartesian + antenna_transform[
+                        "t"]  # place the pattern on antenna position
+                    cartesian_beampattern_list.append(beampattern_cartesian)
             else:
                 phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
-                s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                  phi_B=phi_B, sigma=0.1)
-                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=50, N_phi=100,
-                                                                                       fs=fs,
-                                                                                       r=ant_pos_m_i)
-                # results = np.sqrt(results) # power to amplitude conversion
-                beampattern_2d_list.append({"results": results,
-                                            "thetas": thetas,
-                                            "phis": phis})
-                beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                beampattern_cartesian = beampattern_cartesian + antenna_transform[
-                    "t"]  # place the pattern on antenna position
-                cartesian_beampattern_list.append(beampattern_cartesian)
+                if params.visualize_beampatterns:
+                    s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
+                                      phi_B=phi_B, sigma=0.1)
+                    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=1000, N_phi=1,
+                                                                                           fs=fs,
+                                                                                           r=ant_pos_m_i)
+                    # results = np.sqrt(results) # power to amplitude conversion
+                    beampattern_2d_list.append({"results": results,
+                                                "thetas": thetas,
+                                                "phis": phis,
+                                                "ant_pos": ant_pos_m_i,
+                                                "s_m": s_m,
+                                                "output_signals": output_signals})
+                    beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
+                    beampattern_cartesian = beampattern_cartesian + antenna_transform[
+                        "t"]  # place the pattern on antenna position
+                    cartesian_beampattern_list.append(beampattern_cartesian)
 
             phi.append(phi_m)
 
@@ -255,36 +294,59 @@ for k in range(len(beacon_pos[0])):
             h.append(h_m)
 
         ################################### visualize beampatterns
-        fig = plt.figure()
-        ax = plt.axes(projection="3d")
-        ax.set_xlim(params.room_x)
-        ax.set_ylim(params.room_y)
-        ax.set_zlim(params.room_z)
+        if params.visualize_beampatterns:
+            fig = plt.figure()
+            ax = plt.axes(projection="3d")
+            ax.set_xlim(params.room_x)
+            ax.set_ylim(params.room_y)
+            ax.set_zlim(params.room_z)
 
-        ax.set_xlabel("x(m)")
-        ax.set_ylabel("y(m)")
-        ax.set_zlabel("z(m)")
-        for beampattern in cartesian_beampattern_list:
-            ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
-        ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
-        ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
+            ax.set_xlabel("x(m)")
+            ax.set_ylabel("y(m)")
+            ax.set_zlabel("z(m)")
+            for beampattern in cartesian_beampattern_list:
+                ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
+            ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
+            ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
 
-        fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
-        for i, beampattern_2d in enumerate(beampattern_2d_list):
-            plt.subplot(2, 2, i+1)
-            thetas = beampattern_2d["thetas"]
-            phis = beampattern_2d["phis"]
-            thetas, phis = np.meshgrid(thetas, phis)
-            r = beampattern_2d["results"]
-            surf = ax[i//2, i%2].plot_surface(thetas/np.pi*180, phis/np.pi*180, r, cmap=cm.coolwarm,
-                                   linewidth=0, antialiased=False)
-            ax[i // 2, i % 2].set_xlabel("theta (rad)")
-            ax[i // 2, i % 2].set_ylabel("phi (rad)")
-            ax[i // 2, i % 2].set_zlabel("power")
-            # Add a color bar which maps values to colors.
-            fig.colorbar(surf, shrink=0.5, aspect=5)
+            fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
+            for i, beampattern_2d in enumerate(beampattern_2d_list):
+                plt.subplot(2, 2, i + 1)
+                thetas = beampattern_2d["thetas"]
+                phis = beampattern_2d["phis"]
+                thetas, phis = np.meshgrid(thetas, phis)
+                r = beampattern_2d["results"]
+                surf = ax[i // 2, i % 2].plot_surface(thetas / np.pi * 180, phis / np.pi * 180, r, cmap=cm.coolwarm,
+                                                      linewidth=0, antialiased=False)
+                ax[i // 2, i % 2].set_xlabel("theta (rad)")
+                ax[i // 2, i % 2].set_ylabel("phi (rad)")
+                ax[i // 2, i % 2].set_zlabel("power")
+                # Add a color bar which maps values to colors.
+                fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        plt.show()
+            fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
+            for i, beampattern_2d in enumerate(beampattern_2d_list):
+                plt.subplot(2, 2, i + 1)
+                ax[i // 2, i % 2].plot(beampattern_2d["thetas"],
+                                       beampattern_2d["results"].reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
+                ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
+                ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
+                ax[i // 2, i % 2].set_rlabel_position(22.5)  # Move grid labels away from other labels
+
+            # fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
+            # for i, beampattern_2d in enumerate(beampattern_2d_list):
+            #     filtered_s_m = remove_components(x=beampattern_2d["s_m"], r=beampattern_2d["ant_pos"], results=beampattern_2d["results"], phi=0, thetas=thetas, output_signals=beampattern_2d["output_signals"])
+            #
+            #     results, output_signals, thetas, phis = beamformer.compute_beampattern(x=filtered_s_m, N_theta=1000, N_phi=1,
+            #                                                                            fs=fs,
+            #                                                                            r=beampattern_2d["ant_pos"])
+            #
+            #     plt.subplot(2, 2, i + 1)
+            #     ax[i // 2, i % 2].plot(thetas,
+            #                            results.reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
+            #     ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
+            #     ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
+            plt.show()
         ################################### visualize beampatterns
 
         ant_pos_i = np.hstack(ant_pos_i)
@@ -321,7 +383,7 @@ for k in range(len(beacon_pos[0])):
 
     xs.append(x)
 
-# xs = np.array(xs).squeeze()
+xs = np.array(xs).squeeze()
 # for k, (x, multipath_sources_at_k) in enumerate(zip(xs, multipath_sources)):
 #     print("Time step: ", k)
 #     print(f"x: {x[0]}, y: {x[1]}, z: {x[2]}, vx: {x[3]}, vy: {x[4]}, vz: {x[5]}")
