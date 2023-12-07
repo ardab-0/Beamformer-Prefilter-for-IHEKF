@@ -10,7 +10,7 @@ class FourierBeamformer:
         """
         self.type = type
 
-    def compute_beampattern(self, x, N_theta, N_phi, fs, r):
+    def compute_beampattern(self, x, N_theta, N_phi, fs, r, phi=0, theta=0):
         """
 
         :param x: input signals, shape:(N_array, N)
@@ -24,23 +24,34 @@ class FourierBeamformer:
                     phis: shape: (N_phi,)
                 )
         """
+        if N_theta == 1 and N_phi == 1:
+            thetas = theta
+            phis = phi
+        elif N_theta == 1:
+            phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+            thetas = theta
+        elif N_phi == 1:
+            thetas = np.linspace(-1*np.pi, np.pi, N_theta)
+            phis = phi
+        else:
+            phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+            thetas = np.linspace(0, np.pi, N_theta)
+
         if self.type == "cpu_np":
-            return self.__compute_beampatern_cpu_np(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_cpu_np(x, thetas, phis, fs, r)
         elif self.type == "gpu":
-            return self.__compute_beampatern_gpu(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_gpu(x, thetas, phis, fs, r)
         elif self.type == "cpu":
-            return self.__compute_beampatern_cpu(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_cpu(x, thetas, phis, fs, r)
         else:
             raise TypeError("Wrong beamfomer type.")
 
 
-    def __compute_beampatern_cpu_np(self, x, N_theta, N_phi, fs, r):
+    def __compute_beampatern_cpu_np(self, x, thetas, phis, fs, r):
         N_array, N = x.shape
 
         x_fft = np.fft.fft(x, axis=1)
 
-        thetas = np.linspace(0, np.pi, N_theta)
-        phis = np.linspace(-1 * np.pi, np.pi, N_phi)
         f = np.fft.fftfreq(N, 1 / fs).reshape((1, -1))
         # results = np.zeros((N_theta, N_phi))
         #
@@ -60,9 +71,10 @@ class FourierBeamformer:
         out = np.fft.ifft(out, axis=0)
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
+        results /= np.max(results)
         return results, output_signals, thetas, phis
 
-    def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
+    def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         N_array, N = x.shape
 
@@ -70,8 +82,7 @@ class FourierBeamformer:
         x_fft = torch.fft.fft(x, axis=1)
 
 
-        thetas = np.linspace(0, np.pi, N_theta)
-        phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+
         f = torch.fft.fftfreq(N, 1 / fs).reshape((1, -1))
         # results = np.zeros((N_theta, N_phi))
         #
@@ -105,23 +116,22 @@ class FourierBeamformer:
         out = torch.fft.ifft(out, axis=0)
         output_signals = torch.permute(out, (1, 2, 0))
         results = torch.mean(torch.abs(out) ** 2, dim=0)
-
+        results /= torch.max(results)
         return results.cpu().numpy(), output_signals.cpu().numpy(), thetas, phis
 
 
 
-    def __compute_beampatern_cpu(self, x, N_theta, N_phi, fs, r):
+    def __compute_beampatern_cpu(self, x, thetas, phis, fs, r):
         N_array, N = x.shape
         x_fft = np.zeros((N_array, N), dtype=complex)
         for i in range(N_array):
             x_fft[i, :] = np.fft.fft(x[i, :])
 
-        thetas = np.linspace(0, np.pi, N_theta)
-        phis = np.linspace(-1 * np.pi, np.pi, N_phi)
-        f = np.fft.fftfreq(N, 1 / fs)
-        results = np.zeros((N_theta, N_phi))
 
-        output_signals = np.zeros((N_theta, N_phi, N), dtype=np.complex64)
+        f = np.fft.fftfreq(N, 1 / fs)
+        results = np.zeros((len(thetas), len(phis)))
+
+        output_signals = np.zeros((len(thetas), len(phis), N), dtype=np.complex64)
         for k, theta_sweep in enumerate(thetas):
             for l, phi_sweep in enumerate(phis):
                 u_sweep = np.array(
@@ -135,6 +145,7 @@ class FourierBeamformer:
                 out = np.fft.ifft(out)
                 output_signals[k, l, :] = out
                 results[k, l] = np.mean(np.abs(out) ** 2)
+        results /= np.max(results)
         return results, output_signals, thetas, phis
 
 

@@ -10,7 +10,7 @@ class CaponBeamformer:
         """
         self.type = type
 
-    def compute_beampattern(self, x, N_theta, N_phi, fs, r):
+    def compute_beampattern(self, x, N_theta, N_phi, fs, r, phi=0, theta=0):
         """
 
         :param x: input signals, shape:(N_array, N)
@@ -24,12 +24,25 @@ class CaponBeamformer:
                     phis: shape: (N_phi,)
                 )
         """
+        if N_theta == 1 and N_phi == 1:
+            thetas = theta
+            phis = phi
+        elif N_theta == 1:
+            phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+            thetas = theta
+        elif N_phi == 1:
+            thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
+            phis = phi
+        else:
+            phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+            thetas = np.linspace(0, np.pi, N_theta)
+
         if self.type == "cpu_np":
-            return self.__compute_beampatern_cpu_np(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_cpu_np(x, thetas, phis, fs, r)
         elif self.type == "gpu":
-            return self.__compute_beampatern_gpu(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_gpu(x, thetas, phis, fs, r)
         elif self.type == "cpu":
-            return self.__compute_beampatern_cpu(x, N_theta, N_phi, fs, r)
+            return self.__compute_beampatern_cpu(x, thetas, phis, fs, r)
         else:
             raise TypeError("Wrong beamfomer type.")
 
@@ -41,11 +54,9 @@ class CaponBeamformer:
 
 
 
-    def __compute_beampatern_cpu(self, x, N_theta, N_phi, fs, r):
-        thetas = np.linspace(0, np.pi, N_theta)
-        phis = np.linspace(-1 * np.pi, np.pi, N_phi)
+    def __compute_beampatern_cpu(self, x, thetas, phis, fs, r):
 
-        results = np.zeros((N_theta, N_phi))
+        results = np.zeros((len(thetas), len(phis)))
         x = np.asmatrix(x)
         for k, theta_i in enumerate(thetas):
             for l, phi in enumerate(phis):
@@ -63,7 +74,7 @@ class CaponBeamformer:
                 metric = 1 / (a.H @ Rinv @ a)  # Capon's method!
                 metric = metric[0, 0]  # convert the 1x1 matrix to a Python scalar, it's still complex though
 
-                results[k, l] = metric
+                results[k, l] = np.square(metric)
 
         results /= np.max(results)  # normalize
         return results.T, results, thetas, phis
