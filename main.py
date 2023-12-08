@@ -157,9 +157,10 @@ def compute_phase_shift(x, f, u, r):
 
 def remove_components(x, r, results, phi, thetas, output_signals):
     filtered_x = x.copy()
-    N_array = len(r)
+    N_array = len(r[0])
     thetas = np.squeeze(thetas)
     results = np.squeeze(results)
+    output_signals = np.squeeze(output_signals)
     maxima = argrelextrema(results, np.greater)[0]
     max_val = results[maxima]
 
@@ -168,17 +169,21 @@ def remove_components(x, r, results, phi, thetas, output_signals):
 
     sorted_maxima = maxima[arg_max_val]
 
-    for k in range(1, len(sorted_maxima)):
+
+    for k in range(1, 2):
         theta_to_remove = thetas[sorted_maxima[k]]
+        print("theta to remove: ", theta_to_remove)
         u = np.array(
             [np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
         signal_to_remove = output_signals[sorted_maxima[k]]
 
         signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
         for i in range(N_array):
-            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[i])
+            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
 
         filtered_x -= signal_to_remove_at_antenna
+
+    print("\n\n")
     return filtered_x
 
 
@@ -186,17 +191,17 @@ antenna_element_positions = generate_antenna_element_positions(kind=params.anten
 
 beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-r1 = R.from_euler('xyz', [-45, 0, -30], degrees=True)
+r1 = R.from_euler('xyz', [0, 0, -30], degrees=True)
 R1 = r1.as_matrix()
 t1 = np.array([[-1, -1.5, 3]]).T
 ant1_pos = R1 @ antenna_element_positions + t1
 
-r2 = R.from_euler('xyz', [-50, 0, 90], degrees=True)
+r2 = R.from_euler('xyz', [0, 0, 90], degrees=True)
 R2 = r2.as_matrix()
 t2 = np.array([[1.5, 0, 3]]).T
 ant2_pos = R2 @ antenna_element_positions + t2
 
-r3 = R.from_euler('xyz', [-45, 0, -160], degrees=True)
+r3 = R.from_euler('xyz', [0, 0, -160], degrees=True)
 R3 = r3.as_matrix()
 t3 = np.array([[-0.5, 1.5, 3]]).T
 ant3_pos = R3 @ antenna_element_positions + t3
@@ -333,19 +338,19 @@ for k in range(len(beacon_pos[0])):
                 ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
                 ax[i // 2, i % 2].set_rlabel_position(22.5)  # Move grid labels away from other labels
 
-            # fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
-            # for i, beampattern_2d in enumerate(beampattern_2d_list):
-            #     filtered_s_m = remove_components(x=beampattern_2d["s_m"], r=beampattern_2d["ant_pos"], results=beampattern_2d["results"], phi=0, thetas=thetas, output_signals=beampattern_2d["output_signals"])
-            #
-            #     results, output_signals, thetas, phis = beamformer.compute_beampattern(x=filtered_s_m, N_theta=1000, N_phi=1,
-            #                                                                            fs=fs,
-            #                                                                            r=beampattern_2d["ant_pos"])
-            #
-            #     plt.subplot(2, 2, i + 1)
-            #     ax[i // 2, i % 2].plot(thetas,
-            #                            results.reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
-            #     ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
-            #     ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
+            fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
+            for i, beampattern_2d in enumerate(beampattern_2d_list):
+                filtered_s_m = remove_components(x=beampattern_2d["s_m"], r=beampattern_2d["ant_pos"], results=beampattern_2d["results"], phi=0, thetas=thetas, output_signals=beampattern_2d["output_signals"])
+
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=filtered_s_m, N_theta=1000, N_phi=1,
+                                                                                       fs=fs,
+                                                                                       r=beampattern_2d["ant_pos"])
+
+                plt.subplot(2, 2, i + 1)
+                ax[i // 2, i % 2].plot(thetas,
+                                       results.reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
+                ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
+                ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
             plt.show()
         ################################### visualize beampatterns
 

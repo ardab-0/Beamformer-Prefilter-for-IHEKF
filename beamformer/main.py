@@ -8,7 +8,7 @@ phi = 0.0
 theta1 = 60.0 / 180 * np.pi
 theta2 = 30.0 / 180 * np.pi
 theta3 = 75.0 / 180 * np.pi
-N_array = 16
+N_array = 8
 
 f = 24e9
 c = 2.998e8

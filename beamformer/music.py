@@ -73,7 +73,7 @@ class MusicBeamformer:
                 metric = 1 / (a.H @ V @ V.H @ a)  # The main MUSIC equation
                 metric = np.abs(metric[0, 0])  # take magnitude
 
-                results[k, l] = metric
+                results[k, l] = np.square(metric)
 
         results /= np.max(results)  # normalize
         return results.T, results, thetas, phis

@@ -13,7 +13,9 @@ class Parameters:
     jacobian_type = "numpy"  # "numpy" or "scipy"
 
     use_multipath = True  # True or False
-    multipath_count = 1
+    multipath_count = 2
 
-    antenna_kind = "irregular_4_4"  # "original" or "square_4_4" or "irregular_4_4"
+    antenna_kind = "regular_16_1"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [16]  # antenna number to include at each iteration
+
+    visualize_beampatterns = True
