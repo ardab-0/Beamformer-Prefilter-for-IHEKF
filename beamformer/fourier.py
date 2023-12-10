@@ -10,7 +10,7 @@ class FourierBeamformer:
         """
         self.type = type
 
-    def compute_beampattern(self, x, N_theta, N_phi, fs, r, phi=0, theta=0):
+    def compute_beampattern(self, x, N_theta, N_phi, fs, r, phi=0, theta=90):
         """
 
         :param x: input signals, shape:(N_array, N)
