@@ -71,5 +71,30 @@ def generate_antenna_element_positions(kind: str, lmb: float) -> np.ndarray:
              [0, 0, 21 * lmb / 2],
              [0, 0, 23 * lmb / 2]
              ]).T
+    elif kind == "plus":
+        return np.array(
+            [[0, 0, 0],
+             [0, 0, lmb / 2],
+             [0, 0, 2*lmb / 2],
+             [0, 0, 3*lmb / 2],
+             [0, 0, 4*lmb / 2],
+             [0, 0, 5*lmb / 2],
+             [0, 0, 6*lmb / 2],
+             [0, 0, 7*lmb / 2],
+             [lmb / 2, 0, 0],
+             [2*lmb / 2, 0, 0],
+             [3*lmb / 2, 0, 0],
+             [4*lmb / 2, 0, 0],
+             [5*lmb / 2, 0, 0],
+             [6*lmb / 2, 0, 0],
+             [7*lmb / 2, 0, 0],
+             [8*lmb / 2, 0, 0]
+             ]).T
+    elif kind == "square_8_8":
+        a = np.zeros((64, 3))
+        for i in range(8):
+            for j in range(8):
+                pass
+
     else:
         raise ValueError("Wrong antenna kind.")
