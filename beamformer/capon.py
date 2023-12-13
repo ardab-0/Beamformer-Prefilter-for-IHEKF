@@ -1,6 +1,6 @@
 import numpy as np
-from config import Parameters as params
-import torch
+from settings.config import Parameters as params
+
 
 class CaponBeamformer:
     def __init__(self, type):

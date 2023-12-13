@@ -3,13 +3,11 @@ import scipy.linalg
 import spatial_filter
 import utils
 from antenna_array import AntennaArray
-from antenna_element_positions import generate_antenna_element_positions
+from settings.antenna_element_positions import generate_antenna_element_positions
 from beamformer.capon import CaponBeamformer
-from beamformer.music import MusicBeamformer
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
-from beamformer.fourier import FourierBeamformer
-from config import Parameters as params
+from settings.config import Parameters as params
 from matplotlib import cm
 import measurement_simulation as sim
 

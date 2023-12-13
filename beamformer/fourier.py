@@ -1,5 +1,5 @@
 import numpy as np
-from config import Parameters as params
+from settings.config import Parameters as params
 import torch
 
 class FourierBeamformer:

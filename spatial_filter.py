@@ -1,6 +1,7 @@
 import utils
 import numpy as np
-from config import Parameters as params
+from measurement_simulation import compute_phase_shift
+from settings.config import Parameters as params
 from scipy.signal import argrelextrema
 
 def remove_components_2D(x, r, results, phis, thetas, output_signals):

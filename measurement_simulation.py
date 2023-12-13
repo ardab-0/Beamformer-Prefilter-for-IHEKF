@@ -1,5 +1,5 @@
 import numpy as np
-from config import Parameters as params
+from settings.config import Parameters as params
 import utils
 def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count):
     phi_mix = np.random.rand() * 2 * np.pi
