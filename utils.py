@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import minimum_filter
-
+import math
 def find_maxima(data:np.ndarray)->np.ndarray:
     """
     Relative maxima finder
@@ -43,3 +43,17 @@ def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
     mod[mod >= np.pi] -= 2 * np.pi
     return mod
+
+
+def cartesian_to_spherical(x, y, z):
+    """
+
+    :param x:
+    :param y:
+    :param z:
+    :return: r, theta, phi
+    """
+    r = math.sqrt(x**2 + y**2 + z**2)
+    phi = math.atan2(y, x)
+    theta = math.acos(z / r)
+    return r, theta, phi
