@@ -2,6 +2,7 @@ import numpy as np
 from settings.config import Parameters as params
 import torch
 
+
 class FourierBeamformer:
     def __init__(self, type):
         """
@@ -31,7 +32,7 @@ class FourierBeamformer:
             phis = np.linspace(-1 * np.pi, np.pi, N_phi)
             thetas = theta
         elif N_phi == 1:
-            thetas = np.linspace(-1*np.pi, np.pi, N_theta)
+            thetas = np.linspace(-1 * np.pi, np.pi, N_theta)
             phis = phi
         else:
             phis = np.linspace(-1 * np.pi, np.pi, N_phi)
@@ -45,7 +46,6 @@ class FourierBeamformer:
             return self.__compute_beampatern_cpu(x, thetas, phis, fs, r)
         else:
             raise TypeError("Wrong beamfomer type.")
-
 
     def __compute_beampatern_cpu_np(self, x, thetas, phis, fs, r):
         N_array, N = x.shape
@@ -77,27 +77,19 @@ class FourierBeamformer:
     def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         N_array, N = x.shape
-
         x = torch.from_numpy(x)
         x_fft = torch.fft.fft(x, axis=1)
-
-
-
         f = torch.fft.fftfreq(N, 1 / fs).reshape((1, -1))
-        # results = np.zeros((N_theta, N_phi))
-        #
-        # output_signals = np.zeros((N_theta, N_phi, N), dtype=np.complex64)
         theta_sweep, phi_sweep = np.meshgrid(thetas, phis)
 
         u_sweep = np.array(
-            [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
+            [np.sin(theta_sweep) * np.cos(phi_sweep),
+             np.sin(theta_sweep) * np.sin(phi_sweep),
              np.cos(theta_sweep)])
         u_sweep = torch.from_numpy(u_sweep)
 
-
         r = torch.from_numpy(r)
         r.type(torch.float32)
-
 
         v = torch.tensordot(r.T, u_sweep, dims=1)
         v = torch.unsqueeze(v, dim=1)
@@ -119,14 +111,11 @@ class FourierBeamformer:
         results /= torch.max(results)
         return results.cpu().numpy(), output_signals.cpu().numpy(), thetas, phis
 
-
-
     def __compute_beampatern_cpu(self, x, thetas, phis, fs, r):
         N_array, N = x.shape
         x_fft = np.zeros((N_array, N), dtype=complex)
         for i in range(N_array):
             x_fft[i, :] = np.fft.fft(x[i, :])
-
 
         f = np.fft.fftfreq(N, 1 / fs)
         results = np.zeros((len(thetas), len(phis)))
@@ -135,7 +124,8 @@ class FourierBeamformer:
         for k, theta_sweep in enumerate(thetas):
             for l, phi_sweep in enumerate(phis):
                 u_sweep = np.array(
-                    [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep), np.cos(theta_sweep)])
+                    [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
+                     np.cos(theta_sweep)])
 
                 out = 0
                 for i in range(N_array):
@@ -147,7 +137,6 @@ class FourierBeamformer:
                 results[k, l] = np.mean(np.abs(out) ** 2)
         results /= np.max(results)
         return results, output_signals, thetas, phis
-
 
     def spherical_to_cartesian(self, results, thetas, phis):
         """
@@ -161,7 +150,6 @@ class FourierBeamformer:
         r = np.array(results).reshape((-1, 1))
         theta = theta_mesh.reshape((-1, 1))
         phi = phi_mesh.reshape((-1, 1))
-
 
         x = r * np.sin(theta) * np.cos(phi)
         y = r * np.sin(theta) * np.sin(phi)

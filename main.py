@@ -5,6 +5,7 @@ import utils
 from antenna_array import AntennaArray
 from settings.antenna_element_positions import generate_antenna_element_positions
 from beamformer.capon import CaponBeamformer
+from beamformer.fourier import FourierBeamformer
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from settings.config import Parameters as params
@@ -30,7 +31,7 @@ A_full = sim.get_A_full(antenna_element_positions)
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = CaponBeamformer(type="cpu")
+beamformer = FourierBeamformer(type="gpu")
 
 for k in range(len(beacon_pos[0])):
     # prediction
@@ -75,7 +76,13 @@ for k in range(len(beacon_pos[0])):
                                                                                                N_phi=params.N_phi,
                                                                                                fs=fs,
                                                                                                r=ant_pos_m_i)
-                        # results = np.sqrt(results) # power to amplitude conversion
+                        element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas, phis=phis)
+                        # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+                        # ax.plot_surface(theta_e, phi_e, element_beampattern, vmin=element_beampattern.min() * 2, cmap=cm.Blues)
+                        # plt.show()
+                        results *= element_beampattern
+
+                        results = np.sqrt(results) # power to amplitude conversion
                         beampattern_2d_list.append({"results": results,
                                                     "thetas": thetas,
                                                     "phis": phis,
