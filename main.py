@@ -1,246 +1,48 @@
 import numpy as np
 import scipy.linalg
+import spatial_filter
+import utils
+from antenna_array import AntennaArray
 from antenna_element_positions import generate_antenna_element_positions
 from beamformer.capon import CaponBeamformer
 from beamformer.music import MusicBeamformer
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
-from scipy.spatial.transform import Rotation as R
 from beamformer.fourier import FourierBeamformer
 from config import Parameters as params
 from matplotlib import cm
-from scipy.signal import argrelextrema
+import measurement_simulation as sim
 
 np.random.seed(1)
 
-
-def mod_2pi(x):
-    mod = np.mod(x, 2 * np.pi)
-    mod[mod >= np.pi] -= 2 * np.pi
-    return mod
-
-
-def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count):
-    phi_mix = np.random.rand() * 2 * np.pi
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
-    phi = -2 * np.pi * params.f * tau + phi_mix
-    s_mix = np.exp(1j * phi)
-    multipath_sources = []
-    for p in range(multipath_count):
-        x = np.random.uniform(params.room_x[0], params.room_x[1])
-        y = np.random.uniform(params.room_y[0], params.room_y[1])
-        z = np.random.uniform(params.room_z[0], params.room_z[1])
-        a = np.random.uniform(0, 1)
-        multipath_sources.append({"position": [x, y, z],
-                                  "amplitude": a})
-        multipath_source_pos = np.array([[x, y, z]]).T
-        tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / params.c
-        phi = -2 * np.pi * params.f * tau + phi_mix
-        s_mix += a * np.exp(1j * phi)
-
-    total_phi = np.angle(s_mix)
-    n = np.random.randn(*total_phi.shape) * sigma_phi
-    total_phi = mod_2pi(total_phi + n).reshape((-1, 1))
-    return total_phi, multipath_sources
-
-
-def measure(antenna_positions, beacon_pos, sigma_phi):
-    # random phase offset for receiver
-    phi_mix = np.random.rand() * 2 * np.pi
-    # phi_mix = 0
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
-
-    n = np.random.randn(*tau.shape) * sigma_phi
-    phi = mod_2pi(-2 * np.pi * params.f * tau + phi_mix + n).reshape((-1, 1))
-    return phi
-
-
-def measure_s_m(t, antenna_positions, beacon_pos, phi_B, sigma):
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
-    phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
-    x = np.exp(1j * phi)
-    n = np.random.randn(*x.shape) + 1j * np.random.randn(*x.shape)
-    return x + sigma * n
-
-
-def measure_s_m_multipath(t, antenna_positions, beacon_pos, phi_B, sigma, multipath_sources):
-    tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
-    phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
-    s_m = np.exp(1j * phi)
-
-    for p, source in enumerate(multipath_sources):
-        x = source["x"]
-        y = source["y"]
-        z = source["z"]
-        a = source["a"]
-        multipath_source_pos = np.array([[x, y, z]]).T
-        tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / params.c
-        phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
-        s_m += a * np.exp(1j * phi)
-        print(f"Multipath {p}: a:{a}, x:{x}, y:{y}, z:{z}")
-
-    n = np.random.randn(*s_m.shape) + 1j * np.random.randn(*s_m.shape)
-    return s_m + sigma * n
-
-
-def generate_multipath_sources(multipath_count):
-    sources = []
-    for p in range(multipath_count):
-        x = np.random.uniform(params.room_x[0], params.room_x[1])
-        y = np.random.uniform(params.room_y[0], params.room_y[1])
-        z = np.random.uniform(params.room_z[0], params.room_z[1])
-        a = np.random.uniform(0, 1)
-        sources.append({"a": a,
-                        "x": x,
-                        "y": y,
-                        "z": z})
-
-    return sources
-
-
-def measure_phi(s_m, f_m, t):  # might need to modify mean
-    phi_lo = np.random.rand() * 2 * np.pi
-    s_lo = np.exp(-1j * (2 * np.pi * f_m * t + phi_lo))
-    s_mix = s_m * s_lo
-    phi = np.mean(np.angle(s_mix), axis=1).reshape((-1, 1))
-    phi = mod_2pi(phi)
-    return phi
-
-
-def compute_G(dt):
-    G = np.array(
-        [
-            [dt ** 2 / 2, 0, 0],
-            [0, dt ** 2 / 2, 0],
-            [0, 0, dt ** 2 / 2],
-            [dt, 0, 0],
-            [0, dt, 0],
-            [0, 0, dt],
-        ]
-    )
-
-    return G
-
-
-def compute_F(dt):
-    F = np.array(
-        [
-            [1, 0, 0, dt, 0, 0],
-            [0, 1, 0, 0, dt, 0],
-            [0, 0, 1, 0, 0, dt],
-            [0, 0, 0, dt, 0, 0],
-            [0, 0, 0, 0, dt, 0],
-            [0, 0, 0, 0, 0, dt],
-        ]
-    )
-
-    return F
-
-
-def get_A_full(antenna_pos):
-    i_max = len(antenna_pos[0]) - 1
-    A_full = np.zeros((i_max, len(antenna_pos[0])))
-
-    for i in range(i_max):
-        A_full[i, i] = 1
-        A_full[i, i + 1] = -1
-
-    return A_full
-
-
-def generate_spiral_path(a, theta_extent, alpha):
-    theta = np.linspace(0, theta_extent)
-    scaling = np.linspace(0.5, 1)
-
-    x = a * np.cos(theta) * scaling
-    y = a * np.sin(theta) * scaling
-    z = a * theta * np.tan(alpha)
-    return np.array([x, y, z]).reshape((3, -1))
-
-
-def compute_phase_shift(x, f, u, r):
-    return x * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)
-
-def mse(x, x_hat):
-    return np.mean(np.square(x-x_hat))
-def remove_components(x, r, results, phi, thetas, output_signals):
-    filtered_x = x.copy()
-    N_array = len(r[0])
-    thetas = np.squeeze(thetas)
-    results = np.squeeze(results)
-    output_signals = np.squeeze(output_signals)
-
-    thetas_to_include = thetas > 0  #############333 might need to change
-    thetas = thetas[thetas_to_include]
-    results = results[thetas_to_include]
-    output_signals = output_signals[thetas_to_include]
-
-    maxima = argrelextrema(results, np.greater)[0]
-    max_val = results[maxima]
-
-    # max_val = max_val[:int(len(max_val) / 2)]
-    arg_max_val = max_val.argsort()[::-1]
-
-    sorted_maxima = maxima[arg_max_val]
-
-    for k in range(1, 6):
-        theta_to_remove = thetas[sorted_maxima[k]]
-        print("theta to remove: ", theta_to_remove)
-        u = np.array(
-            [np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
-        signal_to_remove = output_signals[sorted_maxima[k]]
-
-        signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
-        for i in range(N_array):
-            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
-
-        filtered_x -= signal_to_remove_at_antenna
-
-    print("\n\n")
-    return filtered_x
-
-
 antenna_element_positions = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb)
+antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
+beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-beacon_pos = generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
-
-r1 = R.from_euler('xyz', [-45, 0, -30], degrees=True)
-R1 = r1.as_matrix()
-t1 = np.array([[-1, -1.5, 3]]).T
-ant1_pos = R1 @ antenna_element_positions + t1
-
-r2 = R.from_euler('xyz', [-45, 0, 90], degrees=True)
-R2 = r2.as_matrix()
-t2 = np.array([[1.5, 0, 3]]).T
-ant2_pos = R2 @ antenna_element_positions + t2
-
-r3 = R.from_euler('xyz', [-45, 0, -160], degrees=True)
-R3 = r3.as_matrix()
-t3 = np.array([[-0.5, 1.5, 3]]).T
-ant3_pos = R3 @ antenna_element_positions + t3
-
-antenna_transform_list = [{"R": R1, "t": t1}, {"R": R2, "t": t2}, {"R": R3, "t": t3}]
-antenna_position_list = [ant1_pos, ant2_pos, ant3_pos]
+ant1 = AntennaArray(rot=[0, 45, -30], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
+ant2 = AntennaArray(rot=[0, 45, 185], t=[2, 0, 3], element_positions=antenna_element_positions)
+ant3 = AntennaArray(rot=[0, 45, -60], t=[-1, 1.5, 3], element_positions=antenna_element_positions)
+antenna_list = [ant1, ant2, ant3]
 
 # initial state
 xs = []
 x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).T
 sigma = np.eye(len(x))  # try individual values
-A_full = get_A_full(antenna_element_positions)
+A_full = sim.get_A_full(antenna_element_positions)
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = FourierBeamformer(type="gpu")
+beamformer = CaponBeamformer(type="cpu")
 
 for k in range(len(beacon_pos[0])):
     # prediction
-    G = compute_G(params.dt)
+    G = sim.compute_G(params.dt)
     Q = params.sigma_a ** 2 * G @ G.T
-    F = compute_F(params.dt)
+    F = sim.compute_F(params.dt)
     x = F @ x
     sigma = F @ sigma @ F.T + Q
     phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k
-    multipath_sources = generate_multipath_sources(multipath_count=params.multipath_count)
+    multipath_sources = sim.generate_multipath_sources(multipath_count=params.multipath_count)
     # iteration
     x_0 = x
     for i in params.i_list:
@@ -254,22 +56,24 @@ for k in range(len(beacon_pos[0])):
         cartesian_beampattern_list = []
         beampattern_2d_list = []
 
-        for ant_pos, antenna_transform in zip(antenna_position_list, antenna_transform_list):
+        for antenna in antenna_list:
+            ant_pos = antenna.get_antenna_positions()
             ant_pos_m_i = ant_pos[:, : i]
             ant_pos_i.append(ant_pos_m_i)
 
             if params.use_multipath:
 
                 if params.measure_phi_m_directly:
-                    phi_m, multipath_sources_at_k = measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
+                    phi_m, multipath_sources_at_k = sim.measure_multipath(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)),
                                                                       sigma_phi=params.sigma_phi,
                                                                       multipath_count=params.multipath_count)
                 else:
-                    s_m = measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
+                    s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
                                                 beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                                 phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
                     if params.visualize_beampatterns:
-                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=params.N_theta,
+                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
+                                                                                               N_theta=params.N_theta,
                                                                                                N_phi=params.N_phi,
                                                                                                fs=fs,
                                                                                                r=ant_pos_m_i)
@@ -281,20 +85,21 @@ for k in range(len(beacon_pos[0])):
                                                     "s_m": s_m,
                                                     "output_signals": output_signals})
                         beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                        beampattern_cartesian = beampattern_cartesian + antenna_transform[
-                            "t"]  # place the pattern on antenna position
+                        beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
                         cartesian_beampattern_list.append(beampattern_cartesian)
 
                     if params.apply_spatial_filter:
-                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=params.N_theta,
+                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
+                                                                                               N_theta=params.N_theta,
                                                                                                N_phi=params.N_phi,
                                                                                                fs=fs,
                                                                                                r=ant_pos_m_i)
-                        s_m = remove_components(x=s_m, r=ant_pos_m_i,
-                                                results=results, phi=0, thetas=thetas,
-                                                output_signals=output_signals)
+                        s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos_m_i,
+                                                   results=results, phis=phis, thetas=thetas,
+                                                   output_signals=output_signals)
                         if params.visualize_beampatterns:
-                            results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=params.N_theta,
+                            results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
+                                                                                                   N_theta=params.N_theta,
                                                                                                    N_phi=params.N_phi,
                                                                                                    fs=fs,
                                                                                                    r=ant_pos_m_i)
@@ -306,20 +111,21 @@ for k in range(len(beacon_pos[0])):
                                                             "s_m_filtered": s_m,
                                                             "output_signals_filtered": output_signals})
 
-
-                    phi_m = measure_phi(s_m=s_m, f_m=params.f, t=t)
+                    phi_m = sim.measure_phi(s_m=s_m, f_m=params.f, t=t)
 
 
             else:
                 if params.measure_phi_m_directly:
-                    phi_m = measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
+                    phi_m = sim.measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
                 else:
-                    s_m = measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
+                    s_m = sim.measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                       phi_B=phi_B, sigma=0.1)
-                    phi_m = measure_phi(s_m=s_m, f_m=params.f, t=t)
+                    phi_m = sim.measure_phi(s_m=s_m, f_m=params.f, t=t)
 
                 if params.visualize_beampatterns:
-                    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m, N_theta=params.N_theta, N_phi=params.N_phi,
+                    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
+                                                                                           N_theta=params.N_theta,
+                                                                                           N_phi=params.N_phi,
                                                                                            fs=fs,
                                                                                            r=ant_pos_m_i)
                     # results = np.sqrt(results) # power to amplitude conversion
@@ -330,8 +136,7 @@ for k in range(len(beacon_pos[0])):
                                                 "s_m": s_m,
                                                 "output_signals": output_signals})
                     beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                    beampattern_cartesian = beampattern_cartesian + antenna_transform[
-                        "t"]  # place the pattern on antenna position
+                    beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
                     cartesian_beampattern_list.append(beampattern_cartesian)
 
             phi.append(phi_m)
@@ -342,7 +147,7 @@ for k in range(len(beacon_pos[0])):
             R_m = params.sigma_phi ** 2 * A_m @ A_m.T
             R.append(R_m.tolist())
 
-            h_m = measure(ant_pos_m_i, x[:3].reshape((-1, 1)), sigma_phi=0)
+            h_m = sim.measure(ant_pos_m_i, x[:3].reshape((-1, 1)), sigma_phi=0)
             h.append(h_m)
 
         ################################### visualize beampatterns
@@ -368,7 +173,7 @@ for k in range(len(beacon_pos[0])):
                 phis = beampattern_2d["phis"]
                 thetas, phis = np.meshgrid(thetas, phis)
                 r = beampattern_2d["results"]
-                surf = ax[i // 2, i % 2].plot_surface(thetas / np.pi * 180, phis / np.pi * 180, r, cmap=cm.coolwarm,
+                surf = ax[i // 2, i % 2].plot_surface(thetas, phis, r, cmap=cm.coolwarm,
                                                       linewidth=0, antialiased=False)
                 ax[i // 2, i % 2].set_xlabel("theta (rad)")
                 ax[i // 2, i % 2].set_ylabel("phi (rad)")
@@ -376,24 +181,22 @@ for k in range(len(beacon_pos[0])):
                 # Add a color bar which maps values to colors.
                 fig.colorbar(surf, shrink=0.5, aspect=5)
 
-            # fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
-            # for i, beampattern_2d in enumerate(beampattern_2d_list):
-            #     plt.subplot(2, 2, i + 1)
-            #     ax[i // 2, i % 2].plot(beampattern_2d["thetas"],
-            #                            beampattern_2d["results"].reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
-            #     ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
-            #     ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
-            #     ax[i // 2, i % 2].set_rlabel_position(22.5)  # Move grid labels away from other labels
-
             if params.apply_spatial_filter:
-                fig, ax = plt.subplots(2, 2, subplot_kw={'projection': 'polar'})
+                fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
                 for i, beampattern_2d in enumerate(beampattern_2d_list):
                     plt.subplot(2, 2, i + 1)
-                    ax[i // 2, i % 2].plot(beampattern_2d["thetas_filtered"],
-                                           beampattern_2d["results_filtered"].reshape((-1)))  # MAKE SURE TO USE RADIAN FOR POLAR
-                    ax[i // 2, i % 2].set_theta_zero_location('N')  # make 0 degrees point up
-                    ax[i // 2, i % 2].set_theta_direction(-1)  # increase clockwise
-                    ax[i // 2, i % 2].set_rlabel_position(22.5)  # Move grid labels away from other labels
+                    thetas = beampattern_2d["thetas_filtered"]
+                    phis = beampattern_2d["phis_filtered"]
+                    thetas, phis = np.meshgrid(thetas, phis)
+                    r = beampattern_2d["results_filtered"]
+                    surf = ax[i // 2, i % 2].plot_surface(thetas, phis, r,
+                                                          cmap=cm.coolwarm,
+                                                          linewidth=0, antialiased=False)
+                    ax[i // 2, i % 2].set_xlabel("theta (rad)")
+                    ax[i // 2, i % 2].set_ylabel("phi (rad)")
+                    ax[i // 2, i % 2].set_zlabel("power")
+                    # Add a color bar which maps values to colors.
+                    fig.colorbar(surf, shrink=0.5, aspect=5)
             plt.show()
         ################################### visualize beampatterns
 
@@ -404,7 +207,7 @@ for k in range(len(beacon_pos[0])):
         h = np.vstack(h)
 
         z = A @ phi
-        h = mod_2pi(A @ h)
+        h = utils.mod_2pi(A @ h)
 
         if params.jacobian_type == "scipy":
             if i not in jacobian_cache:
@@ -423,7 +226,7 @@ for k in range(len(beacon_pos[0])):
 
         K = sigma @ H.T @ np.linalg.inv(R + H @ sigma @ H.T)
 
-        x = x + K @ (mod_2pi(z - h) - H @ (
+        x = x + K @ (utils.mod_2pi(z - h) - H @ (
                 x_0 - x))  ################################################## in paper: x_0 - x
 
     # update
@@ -453,11 +256,14 @@ ax.set_zlabel("z(m)")
 ax.scatter3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
 #
 ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
+
+ant1_pos = antenna_list[0].get_antenna_positions()
+ant2_pos = antenna_list[1].get_antenna_positions()
+ant3_pos = antenna_list[2].get_antenna_positions()
 ax.scatter3D(ant1_pos[0, :], ant1_pos[1, :], ant1_pos[2, :], c="red")
 ax.scatter3D(ant2_pos[0, :], ant2_pos[1, :], ant2_pos[2, :], c="blue")
 ax.scatter3D(ant3_pos[0, :], ant3_pos[1, :], ant3_pos[2, :], c="cyan")
 ax.scatter3D(0, 0, 0, c="black")
 
-
-print("MSE: ", mse(xs[:,:3].T, beacon_pos))
+print("MSE: ", utils.mse(xs[:, :3].T, beacon_pos))
 plt.show()
