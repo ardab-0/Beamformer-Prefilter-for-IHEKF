@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage import minimum_filter
 import math
+from settings.config import Parameters as params
 def find_maxima(data:np.ndarray)->np.ndarray:
     """
     Relative maxima finder
@@ -26,16 +27,16 @@ def find_minima(data:np.ndarray)->np.ndarray:
 
 
 def generate_spiral_path(a, theta_extent, alpha):
-    theta = np.linspace(0, theta_extent)
-    scaling = np.linspace(0.5, 1)
+    theta = np.linspace(0, theta_extent, num=params.k)
+    scaling = np.linspace(0.5, 1, num = params.k)
 
     x = a * np.cos(theta) * scaling
     y = a * np.sin(theta) * scaling
     z = a * theta * np.tan(alpha)
     return np.array([x, y, z]).reshape((3, -1))
 
-def mse(x, x_hat):
-    return np.mean(np.square(x - x_hat))
+def rmse(x, x_hat):
+    return np.sqrt(np.mean(np.square(x - x_hat)))
 
 
 

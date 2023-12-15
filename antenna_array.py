@@ -59,8 +59,8 @@ class AntennaElement:
         # phi period: 2 * pi
         pattern_theta = np.exp(-1 / 2 * ((theta - self.mu_theta) / self.sigma_theta) ** 2)
             #              + np.exp(
-            # -1 / 2 * ((theta - mu_theta - np.pi) / sigma_theta) ** 2) + np.exp(
-            # -1 / 2 * ((theta - mu_theta + np.pi) / sigma_theta) ** 2)
+            # -1 / 2 * ((theta - self.mu_theta - np.pi) / self.sigma_theta) ** 2) + np.exp(
+            # -1 / 2 * ((theta - self.mu_theta + np.pi) / self.sigma_theta) ** 2)
         pattern_phi = np.exp(-1 / 2 * ((phi - self.mu_phi) / self.sigma_phi) ** 2) + np.exp(
             -1 / 2 * ((phi - self.mu_phi - 2 * np.pi) / self.sigma_phi) ** 2) + np.exp(
             -1 / 2 * ((phi - self.mu_phi + 2 * np.pi) / self.sigma_phi) ** 2)
@@ -84,6 +84,10 @@ class AntennaElement:
 # ant = AntennaElement()
 # pattern, theta, phi = ant.get_element_pattern(thetas, phis)
 #
+# x = np.abs(pattern) * np.sin(theta) * np.cos(phi)
+# y = np.abs(pattern) * np.sin(theta) * np.sin(phi)
+# z = np.abs(pattern) * np.cos(theta)
+#
 # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-# ax.plot_surface(theta, phi, pattern, vmin=pattern.min() * 2, cmap=cm.Blues)
+# ax.plot_surface(x, y, z, vmin=pattern.min() * 2, cmap=cm.Blues)
 # plt.show()

@@ -41,7 +41,7 @@ def measure_s_m(t, antenna_positions, beacon_pos, phi_B, sigma):
     phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
     x = np.exp(1j * phi)
     n = np.random.randn(*x.shape) + 1j * np.random.randn(*x.shape)
-    return x + sigma * n
+    return x + sigma * n  # phase of s_m is gaussian due to signal being non-zero
 
 
 def measure_s_m_multipath(t, antenna_positions, beacon_pos, phi_B, sigma, multipath_sources):

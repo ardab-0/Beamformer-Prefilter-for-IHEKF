@@ -70,7 +70,7 @@ class CaponBeamformer:
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
                 metric = 1 / (a.H @ Rinv @ a)
-                metric = metric[0, 0]
+                metric = metric[0, 0].real
                 results[k, l] = np.square(metric)
 
         results /= np.max(results)  # normalize

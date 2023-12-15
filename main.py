@@ -14,11 +14,11 @@ import measurement_simulation as sim
 
 np.random.seed(1)
 
-antenna_element_positions = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb)
+antenna_element_positions, A_full = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb, get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[0, 45, -30], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
+ant1 = AntennaArray(rot=[0, 45, 45], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
 ant2 = AntennaArray(rot=[0, 45, 185], t=[2, 0, 3], element_positions=antenna_element_positions)
 ant3 = AntennaArray(rot=[0, 45, -60], t=[-1, 1.5, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1, ant2, ant3]
@@ -27,11 +27,12 @@ antenna_list = [ant1, ant2, ant3]
 xs = []
 x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).T
 sigma = np.eye(len(x))  # try individual values
-A_full = sim.get_A_full(antenna_element_positions)
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = FourierBeamformer(type="gpu")
+beamformer = CaponBeamformer(type="cpu")
+recorded_phi_differences = []
+
 
 for k in range(len(beacon_pos[0])):
     # prediction
@@ -69,18 +70,33 @@ for k in range(len(beacon_pos[0])):
                 else:
                     s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
                                                 beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                                phi_B=phi_B, sigma=0.1, multipath_sources=multipath_sources)
+                                                phi_B=phi_B, sigma=params.sigma, multipath_sources=multipath_sources)
                     if params.visualize_beampatterns:
                         results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
                                                                                                N_theta=params.N_theta,
                                                                                                N_phi=params.N_phi,
                                                                                                fs=fs,
                                                                                                r=ant_pos_m_i)
+
+
+
+
                         element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas, phis=phis)
+                        # thetas, phis = np.meshgrid(thetas, phis)
+                        # x = np.abs(element_beampattern) * np.sin(thetas) * np.cos(phis)
+                        # y = np.abs(element_beampattern) * np.sin(thetas) * np.sin(phis)
+                        # z = np.abs(element_beampattern) * np.cos(thetas)
+                        #
+                        # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+                        # ax.plot_surface(x, y, z, rstride=2, cstride=2, color='white',
+                        #                 shade=False, edgecolor='k')
+                        # plt.show()
+
                         # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
                         # ax.plot_surface(theta_e, phi_e, element_beampattern, vmin=element_beampattern.min() * 2, cmap=cm.Blues)
                         # plt.show()
-                        results *= element_beampattern
+                        if params.apply_element_pattern:
+                            results *= element_beampattern
 
                         results = np.sqrt(results) # power to amplitude conversion
                         beampattern_2d_list.append({"results": results,
@@ -124,7 +140,7 @@ for k in range(len(beacon_pos[0])):
                     phi_m = sim.measure(ant_pos_m_i, beacon_pos[:, k].reshape((-1, 1)), sigma_phi=params.sigma_phi)
                 else:
                     s_m = sim.measure_s_m(t=t, antenna_positions=ant_pos_m_i, beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                      phi_B=phi_B, sigma=0.1)
+                                      phi_B=phi_B, sigma=params.sigma)
                     phi_m = sim.measure_phi(s_m=s_m, f_m=params.f, t=t)
 
                 if params.visualize_beampatterns:
@@ -213,6 +229,7 @@ for k in range(len(beacon_pos[0])):
 
         z = A @ phi
         h = utils.mod_2pi(A @ h)
+        recorded_phi_differences.append(utils.mod_2pi(A @ phi))
 
         if params.jacobian_type == "scipy":
             if i not in jacobian_cache:
@@ -262,13 +279,17 @@ ax.scatter3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
 #
 ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
 
-ant1_pos = antenna_list[0].get_antenna_positions()
-ant2_pos = antenna_list[1].get_antenna_positions()
-ant3_pos = antenna_list[2].get_antenna_positions()
-ax.scatter3D(ant1_pos[0, :], ant1_pos[1, :], ant1_pos[2, :], c="red")
-ax.scatter3D(ant2_pos[0, :], ant2_pos[1, :], ant2_pos[2, :], c="blue")
-ax.scatter3D(ant3_pos[0, :], ant3_pos[1, :], ant3_pos[2, :], c="cyan")
-ax.scatter3D(0, 0, 0, c="black")
+for ant in antenna_list:
+    ant_pos = ant.get_antenna_positions()
+    ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :])
 
-print("MSE: ", utils.mse(xs[:, :3].T, beacon_pos))
+
+print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
+
+
+recorded_phi_differences = np.asarray(recorded_phi_differences)
+recorded_phi_differences = recorded_phi_differences.squeeze()
+filename = "multipath" if params.use_multipath else "los"
+np.save(filename, recorded_phi_differences)
+
 plt.show()
