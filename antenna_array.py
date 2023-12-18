@@ -3,6 +3,7 @@ from scipy.spatial.transform import Rotation as Rot
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
+import utils
 from utils import cartesian_to_spherical
 
 
@@ -36,7 +37,7 @@ class AntennaArray:
     def _compute_theta_phi(self):
         initial_direction = np.array([[1, 0, 0]]).T
 
-        new_direction = self._R @initial_direction
+        new_direction = self._R @ initial_direction
         r, theta, phi = cartesian_to_spherical(new_direction[0], new_direction[1], new_direction[2])
         return theta, phi
 
@@ -51,24 +52,37 @@ class AntennaElement:
         self.sigma_theta = sigma_theta
         self.sigma_phi = sigma_phi
 
-    def get_element_pattern(self, theta, phi):
-        theta, phi = np.meshgrid(theta, phi)
+    def get_element_pattern(self, thetas, phis):
+        theta, phi = np.meshgrid(thetas, phis)
+        shape = theta.shape
+        dir = np.array([np.sin(self.mu_theta) * np.cos(self.mu_phi), np.sin(self.mu_theta) * np.sin(self.mu_phi), np.cos(self.mu_theta)])
 
-        # to get a periodic pattern
-        #
-        # phi period: 2 * pi
-        pattern_theta = np.exp(-1 / 2 * ((theta - self.mu_theta) / self.sigma_theta) ** 2)
-            #              + np.exp(
-            # -1 / 2 * ((theta - self.mu_theta - np.pi) / self.sigma_theta) ** 2) + np.exp(
-            # -1 / 2 * ((theta - self.mu_theta + np.pi) / self.sigma_theta) ** 2)
-        pattern_phi = np.exp(-1 / 2 * ((phi - self.mu_phi) / self.sigma_phi) ** 2) + np.exp(
-            -1 / 2 * ((phi - self.mu_phi - 2 * np.pi) / self.sigma_phi) ** 2) + np.exp(
-            -1 / 2 * ((phi - self.mu_phi + 2 * np.pi) / self.sigma_phi) ** 2)
-        pattern = pattern_theta * pattern_phi
-        max = np.max(pattern)
-        pattern /= max
-        return pattern, theta, phi
 
+        pattern = np.ones_like(theta)
+
+
+        # t_i = np.logical_and(theta > theta_range[0], theta < theta_range[1])
+        # p_i = np.logical_and(phi > phi_range[0], phi < phi_range[1])
+        # id = np.logical_and(t_i, p_i)
+        # pattern[id] = 1
+
+        theta_1 = theta.ravel()
+        phi_1 = phi.ravel()
+        pattern_1 = pattern.ravel()
+
+        cartesian = utils.spherical_to_cartesian_np(pattern_1, theta_1, phi_1)
+        cartesian = np.vstack(cartesian)
+        projection = dir @ cartesian
+        pattern_1[projection < 0] = 0
+
+
+        # rotated_spherical = utils.cartesian_to_spherical_np(rotated_cartesian[0], rotated_cartesian[1], rotated_cartesian[2])
+
+        pattern_1 = pattern_1.reshape(shape)
+
+
+
+        return pattern_1, theta, phi
 
 
 # phis = np.linspace(-1 * np.pi, np.pi, 100)
