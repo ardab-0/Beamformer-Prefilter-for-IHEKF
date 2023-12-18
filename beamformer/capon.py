@@ -44,7 +44,7 @@ class CaponBeamformer:
         elif self.type == "cpu":
             return self.__compute_beampatern_cpu(x, thetas, phis, fs, r)
         else:
-            raise TypeError("Wrong beamfomer type.")
+            raise TypeError("Wrong compute type.")
 
 
     def __compute_beampatern_cpu_np(self, x, N_theta, N_phi, fs, r):
