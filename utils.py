@@ -4,7 +4,7 @@ import math
 from settings.config import Parameters as params
 
 
-def find_absolute_maxima(data: np.ndarray, threshold: float = 0) -> np.ndarray:
+def find_relative_maxima(data: np.ndarray, threshold: float = 0) -> np.ndarray:
     """
     Absolute maxima finder
 
@@ -15,7 +15,7 @@ def find_absolute_maxima(data: np.ndarray, threshold: float = 0) -> np.ndarray:
     # data /= data_max
     # data = 1 - data
     # maxima = (data == minimum_filter(data, 3, mode='constant', cval=0.0))
-
+    data = np.pad(data, pad_width=1, mode="edge")
     d1 = data[1:-1, 1:-1] - data[1:-1, 2:]
     d2 = data[1:-1, 1:-1] - data[1:-1, 0:-2]
     d3 = data[1:-1, 1:-1] - data[0:-2, 0:-2]
@@ -24,19 +24,19 @@ def find_absolute_maxima(data: np.ndarray, threshold: float = 0) -> np.ndarray:
     d6 = data[1:-1, 1:-1] - data[2:, 0:-2]
     d7 = data[1:-1, 1:-1] - data[2:, 1:-1]
     d8 = data[1:-1, 1:-1] - data[2:, 2:]
-    m1 = d1 > 0
-    m2 = d2 > 0
-    m3 = d3 > 0
-    m4 = d4 > 0
-    m5 = d5 > 0
-    m6 = d6 > 0
-    m7 = d7 > 0
-    m8 = d8 > 0
-    m9 = data[1:-1, 1:-1] > threshold
+    m1 = d1 >= 0
+    m2 = d2 >= 0
+    m3 = d3 >= 0
+    m4 = d4 >= 0
+    m5 = d5 >= 0
+    m6 = d6 >= 0
+    m7 = d7 >= 0
+    m8 = d8 >= 0
+    m9 = data[1:-1, 1:-1] >= threshold
 
     maxima = m1 & m2 & m3 & m4 & m5 & m6 & m7 & m8 & m9
 
-    maxima = np.pad(maxima, pad_width=1, constant_values=False)
+    # maxima = np.pad(maxima, pad_width=1, constant_values=False)
 
     res = np.array(np.where(1 == maxima)).T
     return res
