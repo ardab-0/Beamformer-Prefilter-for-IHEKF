@@ -55,7 +55,9 @@ class CaponBeamformer:
 
 
     def __compute_beampatern_cpu(self, x, thetas, phis, fs, r):
+        N_array, N = x.shape
 
+        output_signals = np.zeros((len(thetas), len(phis), N), dtype=np.complex64)
         results = np.zeros((len(thetas), len(phis)))
         x = np.asmatrix(x)
         # Calc covariance matrix
@@ -69,12 +71,16 @@ class CaponBeamformer:
                 a = r.T @ u_sweep
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
-                metric = 1 / (a.H @ Rinv @ a)
-                metric = metric[0, 0].real
-                results[k, l] = np.square(metric)
+                c = 1 / (a.H @ Rinv @ a)
+                w = Rinv @ a * c
+                c = c[0, 0].real
+                results[k, l] = np.square(c)
+                out = w.H @ x
+                output_signals[k, l, :] = out
 
         results /= np.max(results)  # normalize
-        return results.T, results, thetas, phis
+        output_signals = np.transpose(output_signals, (1, 0, 2))
+        return results.T, output_signals, thetas, phis
 
 
     def spherical_to_cartesian(self, results, thetas, phis):
