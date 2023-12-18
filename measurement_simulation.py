@@ -1,6 +1,8 @@
 import numpy as np
 from settings.config import Parameters as params
 import utils
+
+
 def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count):
     phi_mix = np.random.rand() * 2 * np.pi
     tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
@@ -127,6 +129,7 @@ def get_A_full(antenna_pos):
         A_full[i, i + 1] = -1
 
     return A_full
+
 
 def compute_phase_shift(x, f, u, r):
     return x * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)

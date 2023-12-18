@@ -3,6 +3,7 @@ import scipy.linalg
 import spatial_filter
 import utils
 from antenna_array import AntennaArray
+from beamformer.beamformer import generate_beamformer
 from settings.antenna_element_positions import generate_antenna_element_positions
 from beamformer.capon import CaponBeamformer
 from beamformer.fourier import FourierBeamformer
@@ -30,7 +31,7 @@ sigma = np.eye(len(x))  # try individual values
 jacobian_cache = {}
 fs = 100 * params.f
 t = np.arange(params.N) / fs
-beamformer = CaponBeamformer(type="cpu")
+beamformer = generate_beamformer(beamformer_type=params.beamformer_type)
 recorded_phi_differences = []
 
 
@@ -71,25 +72,26 @@ for k in range(len(beacon_pos[0])):
                     s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos_m_i,
                                                 beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                                 phi_B=phi_B, sigma=params.sigma, multipath_sources=multipath_sources)
+
+                    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
+                                                                                           N_theta=params.N_theta,
+                                                                                           N_phi=params.N_phi,
+                                                                                           fs=fs,
+                                                                                           r=ant_pos_m_i)
+                    # results = np.sqrt(results)  # power to amplitude conversion
                     if params.visualize_beampatterns:
-                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
-                                                                                               N_theta=params.N_theta,
-                                                                                               N_phi=params.N_phi,
-                                                                                               fs=fs,
-                                                                                               r=ant_pos_m_i)
-
-
-
-
                         element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas, phis=phis)
-                        # thetas, phis = np.meshgrid(thetas, phis)
-                        # x = np.abs(element_beampattern) * np.sin(thetas) * np.cos(phis)
-                        # y = np.abs(element_beampattern) * np.sin(thetas) * np.sin(phis)
-                        # z = np.abs(element_beampattern) * np.cos(thetas)
+                        # x = np.abs(element_beampattern) * np.sin(theta_e) * np.cos(phi_e)
+                        # y = np.abs(element_beampattern) * np.sin(theta_e) * np.sin(phi_e)
+                        # z = np.abs(element_beampattern) * np.cos(theta_e)
                         #
                         # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+                        # # ax.scatter3D(x, y, z)
                         # ax.plot_surface(x, y, z, rstride=2, cstride=2, color='white',
                         #                 shade=False, edgecolor='k')
+                        # ax.set_xlim([-1.5, 1.5])
+                        # ax.set_ylim([-1.5, 1.5])
+                        # ax.set_zlim([-1.5, 1.5])
                         # plt.show()
 
                         # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
@@ -98,7 +100,7 @@ for k in range(len(beacon_pos[0])):
                         if params.apply_element_pattern:
                             results *= element_beampattern
 
-                        results = np.sqrt(results) # power to amplitude conversion
+
                         beampattern_2d_list.append({"results": results,
                                                     "thetas": thetas,
                                                     "phis": phis,
@@ -110,11 +112,6 @@ for k in range(len(beacon_pos[0])):
                         cartesian_beampattern_list.append(beampattern_cartesian)
 
                     if params.apply_spatial_filter:
-                        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
-                                                                                               N_theta=params.N_theta,
-                                                                                               N_phi=params.N_phi,
-                                                                                               fs=fs,
-                                                                                               r=ant_pos_m_i)
                         s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos_m_i,
                                                    results=results, phis=phis, thetas=thetas,
                                                    output_signals=output_signals)

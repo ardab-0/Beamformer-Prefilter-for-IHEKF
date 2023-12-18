@@ -7,12 +7,12 @@ from scipy.signal import argrelextrema
 def remove_components_2D(x, r, results, phis, thetas, output_signals):
     filtered_x = x.copy()
     N_array = len(r[0])
-    maxima = utils.find_maxima(results)
+    maxima = utils.find_relative_maxima(results, threshold=0.1)
     max_val = results[maxima[:, 0], maxima[:, 1]]
     arg_max_val = max_val.argsort()[::-1]
     sorted_maxima = maxima[arg_max_val]
 
-    for k in range(1, 2):
+    for k in range(1, min(2, len(sorted_maxima))):
         theta_to_remove = thetas[sorted_maxima[k][1]]
         phi_to_remove = phis[sorted_maxima[k][0]]
         print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")
