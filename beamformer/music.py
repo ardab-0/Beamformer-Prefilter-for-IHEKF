@@ -76,6 +76,7 @@ class MusicBeamformer:
                 results[k, l] = np.square(metric)
 
         results /= np.max(results)  # normalize
+        results = np.sqrt(results)  # power to amplitude conversion
         return results.T, results, thetas, phis
 
 

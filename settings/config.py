@@ -7,12 +7,12 @@ class Parameters:
     room_z = [0, 3]  # m
     sigma_phi = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
 
-    sigma = 0.1 # std of complex gaussian noise (input signal noise)
+    sigma = 0.05 # std of complex gaussian noise (input signal noise)
     sigma_a = 0.4 # m/s**2
     dt = 0.1  # s
     N_theta = 50
     N_phi = 100
-    N = 200
+    N = 500
     jacobian_type = "numpy"  # "numpy" or "scipy"
     apply_element_pattern = True
 
@@ -24,8 +24,8 @@ class Parameters:
 
     visualize_beampatterns = True
     measure_phi_m_directly = False
-    apply_spatial_filter = False
+    apply_spatial_filter = True
 
     k = 100 # number of time steps sampled in path
 
-    beamformer_type = "fourier" # "fourier" , "capon", "music"
+    beamformer_type = "capon" # "fourier" , "capon", "music"

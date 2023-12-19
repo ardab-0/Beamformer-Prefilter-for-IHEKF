@@ -72,6 +72,7 @@ class FourierBeamformer:
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
         results /= np.max(results)
+        results = np.sqrt(results)  # power to amplitude conversion
         return results, output_signals, thetas, phis
 
     def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):
@@ -109,6 +110,7 @@ class FourierBeamformer:
         output_signals = torch.permute(out, (1, 2, 0))
         results = torch.mean(torch.abs(out) ** 2, dim=0)
         results /= torch.max(results)
+        results = torch.sqrt(results)  # power to amplitude conversion
         return results.cpu().numpy(), output_signals.cpu().numpy(), thetas, phis
 
     def __compute_beampatern_cpu(self, x, thetas, phis, fs, r):
@@ -136,6 +138,7 @@ class FourierBeamformer:
                 output_signals[k, l, :] = out
                 results[k, l] = np.mean(np.abs(out) ** 2)
         results /= np.max(results)
+        results = np.sqrt(results)  # power to amplitude conversion
         return results, output_signals, thetas, phis
 
     def spherical_to_cartesian(self, results, thetas, phis):

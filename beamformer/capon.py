@@ -80,6 +80,7 @@ class CaponBeamformer:
 
         results /= np.max(results)  # normalize
         output_signals = np.transpose(output_signals, (1, 0, 2))
+        results = np.sqrt(results)  # power to amplitude conversion
         return results.T, output_signals, thetas, phis
 
 

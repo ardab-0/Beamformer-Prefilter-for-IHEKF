@@ -5,8 +5,6 @@ import utils
 from antenna_array import AntennaArray
 from beamformer.beamformer import generate_beamformer
 from settings.antenna_element_positions import generate_antenna_element_positions
-from beamformer.capon import CaponBeamformer
-from beamformer.fourier import FourierBeamformer
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
 from settings.config import Parameters as params
@@ -17,6 +15,7 @@ np.random.seed(1)
 
 antenna_element_positions, A_full = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb, get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
+
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
 ant1 = AntennaArray(rot=[0, 45, 45], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
@@ -78,7 +77,7 @@ for k in range(len(beacon_pos[0])):
                                                                                            N_phi=params.N_phi,
                                                                                            fs=fs,
                                                                                            r=ant_pos_m_i)
-                    # results = np.sqrt(results)  # power to amplitude conversion
+
                     if params.visualize_beampatterns:
                         element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas, phis=phis)
                         # x = np.abs(element_beampattern) * np.sin(theta_e) * np.cos(phi_e)
