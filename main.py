@@ -19,7 +19,7 @@ antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # s
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
 ant1 = AntennaArray(rot=[0, 45, 45], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
-ant2 = AntennaArray(rot=[0, 45, 185], t=[2, 0, 3], element_positions=antenna_element_positions)
+ant2 = AntennaArray(rot=[0, 45, 185], t=[2, 0.5, 3], element_positions=antenna_element_positions)
 ant3 = AntennaArray(rot=[0, 45, -60], t=[-1, 1.5, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1, ant2, ant3]
 
@@ -78,8 +78,13 @@ for k in range(len(beacon_pos[0])):
                                                                                            fs=fs,
                                                                                            r=ant_pos_m_i)
 
+                    if params.apply_element_pattern:
+                        element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas,
+                                                                                                      phis=phis)
+                        results *= element_beampattern
+
                     if params.visualize_beampatterns:
-                        element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas, phis=phis)
+
                         # x = np.abs(element_beampattern) * np.sin(theta_e) * np.cos(phi_e)
                         # y = np.abs(element_beampattern) * np.sin(theta_e) * np.sin(phi_e)
                         # z = np.abs(element_beampattern) * np.cos(theta_e)
@@ -96,8 +101,7 @@ for k in range(len(beacon_pos[0])):
                         # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
                         # ax.plot_surface(theta_e, phi_e, element_beampattern, vmin=element_beampattern.min() * 2, cmap=cm.Blues)
                         # plt.show()
-                        if params.apply_element_pattern:
-                            results *= element_beampattern
+
 
 
                         beampattern_2d_list.append({"results": results,
@@ -283,9 +287,9 @@ for ant in antenna_list:
 print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
 
 
-recorded_phi_differences = np.asarray(recorded_phi_differences)
-recorded_phi_differences = recorded_phi_differences.squeeze()
-filename = "multipath" if params.use_multipath else "los"
-np.save(filename, recorded_phi_differences)
+# recorded_phi_differences = np.asarray(recorded_phi_differences)
+# recorded_phi_differences = recorded_phi_differences.squeeze()
+# filename = "multipath" if params.use_multipath else "los"
+# np.save(filename, recorded_phi_differences)
 
 plt.show()

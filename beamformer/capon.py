@@ -71,16 +71,18 @@ class CaponBeamformer:
                 a = r.T @ u_sweep
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
-                c = 1 / (a.H @ Rinv @ a)
+                c = 1 / (a.H @ Rinv @ a)[0,0]
                 w = Rinv @ a * c
-                c = c[0, 0].real
-                results[k, l] = np.square(c)
                 out = w.H @ x
+                out /= N_array
+                c = np.linalg.norm(out)
+                results[k, l] = c
+
                 output_signals[k, l, :] = out
 
-        results /= np.max(results)  # normalize
+        # results /= np.max(results)  # normalize
         output_signals = np.transpose(output_signals, (1, 0, 2))
-        results = np.sqrt(results)  # power to amplitude conversion
+        # results = np.sqrt(results)  # power to amplitude conversion
         return results.T, output_signals, thetas, phis
 
 
