@@ -7,7 +7,7 @@ from settings.config import Parameters as params
 from scipy.signal import argrelextrema
 
 
-def remove_close_peaks(theta_peak, phi_peak, eps = 0.1):
+def remove_close_peaks(theta_peak, phi_peak, eps=0.1):
     """
     needs further testing
 
@@ -29,30 +29,79 @@ def remove_close_peaks(theta_peak, phi_peak, eps = 0.1):
         z_pairs = np.stack([z[ids_pairs[:, 0]], z[ids_pairs[:, 1]]]).T
         dz_pairs = np.diff(z_pairs, axis=1).ravel()
 
-        d_pairs = np.sqrt(dx_pairs ** 2 + dy_pairs ** 2 + dz_pairs**2)
+        d_pairs = np.sqrt(dx_pairs ** 2 + dy_pairs ** 2 + dz_pairs ** 2)
 
         close_pairs = ids_pairs[d_pairs < eps]
         idx_to_remove = set(close_pairs[:, 1])
         idx_set = set(ids)
-        if len(idx_to_remove)>0:
+        if len(idx_to_remove) > 0:
             idx_set = idx_set - idx_to_remove
         idx_to_keep = list(idx_set)
 
     return theta_peak[idx_to_keep], phi_peak[idx_to_keep]
 
+
 def remove_components_2D(x, r, results, phis, thetas, output_signals):
     filtered_x = x.copy()
     N_array = len(r[0])
-    maxima = utils.find_relative_maxima(results, threshold=0.1)
+
+    # # due to periodicity of phi
+    # results = np.vstack((results, results, results))
+    # thetas = np.hstack((thetas, thetas, thetas))
+    # phis = np.hstack((phis, phis, phis))
+    # output_signals = np.vstack((output_signals, output_signals, output_signals))
+
+
+    maxima = utils.find_relative_maxima(results, threshold=params.peak_threshold)
     max_val = results[maxima[:, 0], maxima[:, 1]]
     arg_max_val = max_val.argsort()[::-1]
     sorted_maxima = maxima[arg_max_val]
 
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
-    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis)
+    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.3)
 
-    for k in range(1, min(2, len(filtered_peak_thetas))):
+    for k in range(1, min(params.num_peaks_to_remove+1, len(filtered_peak_thetas))):
+        theta_to_remove = filtered_peak_thetas[k]
+        phi_to_remove = filtered_peak_phis[k]
+        print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")
+
+        u = np.array(
+            [np.sin(theta_to_remove) * np.cos(phi_to_remove), np.sin(theta_to_remove) * np.sin(phi_to_remove),
+             np.cos(theta_to_remove)])
+        signal_to_remove = output_signals[sorted_maxima[k][0], sorted_maxima[k][1]]
+
+        signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
+        for i in range(N_array):
+            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
+
+        filtered_x -= signal_to_remove_at_antenna
+
+    print("\n\n")
+    return filtered_x
+
+
+def remove_max_2D(x, r, results, phis, thetas, output_signals):
+    filtered_x = x.copy()
+    N_array = len(r[0])
+
+    # # due to periodicity of phi
+    # results = np.vstack((results, results, results))
+    # thetas = np.hstack((thetas, thetas, thetas))
+    # phis = np.hstack((phis, phis, phis))
+    # output_signals = np.vstack((output_signals, output_signals, output_signals))
+
+
+    maxima = utils.find_relative_maxima(results, threshold=params.peak_threshold)
+    max_val = results[maxima[:, 0], maxima[:, 1]]
+    arg_max_val = max_val.argsort()[::-1]
+    sorted_maxima = maxima[arg_max_val]
+
+    peak_thetas = thetas[sorted_maxima[:, 1]]
+    peak_phis = phis[sorted_maxima[:, 0]]
+    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.3)
+
+    for k in range(0, min(params.num_peaks_to_remove, len(filtered_peak_thetas))):
         theta_to_remove = filtered_peak_thetas[k]
         phi_to_remove = filtered_peak_phis[k]
         print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")

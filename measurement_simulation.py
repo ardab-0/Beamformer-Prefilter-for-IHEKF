@@ -72,7 +72,7 @@ def generate_multipath_sources(multipath_count):
         x = np.random.uniform(params.room_x[0], params.room_x[1])
         y = np.random.uniform(params.room_y[0], params.room_y[1])
         z = np.random.uniform(params.room_z[0], params.room_z[1])
-        a = np.random.uniform(0, 1)
+        a = np.random.uniform(0, params.max_multipath_amplitude)
         sources.append({"a": a,
                         "x": x,
                         "y": y,
