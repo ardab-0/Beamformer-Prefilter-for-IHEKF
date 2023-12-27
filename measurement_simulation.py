@@ -69,9 +69,9 @@ def measure_s_m_multipath(t, antenna_positions, beacon_pos, phi_B, sigma, multip
 def generate_multipath_sources(multipath_count):
     sources = []
     for p in range(multipath_count):
-        x = np.random.uniform(params.room_x[0], params.room_x[1])
-        y = np.random.uniform(params.room_y[0], params.room_y[1])
-        z = np.random.uniform(params.room_z[0], params.room_z[1])
+        x = np.random.uniform(params.room_x[0]/2, params.room_x[1]/2)
+        y = np.random.uniform(params.room_y[0]/2, params.room_y[1]/2)
+        z = np.random.uniform(-params.room_z[1], params.room_z[1])
         a = np.random.uniform(0, params.max_multipath_amplitude)
         sources.append({"a": a,
                         "x": x,
