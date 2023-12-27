@@ -59,7 +59,7 @@ def remove_components_2D(x, r, results, phis, thetas, output_signals):
 
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
-    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.3)
+    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.2)
 
     for k in range(1, min(params.num_peaks_to_remove+1, len(filtered_peak_thetas))):
         theta_to_remove = filtered_peak_thetas[k]
@@ -80,8 +80,19 @@ def remove_components_2D(x, r, results, phis, thetas, output_signals):
     print("\n\n")
     return filtered_x
 
+def remove_target(peak_thetas, peak_phis, target_theta, target_phi, d_theta, d_phi):
+    x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
+    x_t, y_t, z_t = utils.spherical_to_cartesian_np(1, [target_theta-d_theta/2, target_theta+d_theta/2], [target_phi-d_phi/2, target_phi+d_phi/2])
 
-def remove_max_2D(x, r, results, phis, thetas, output_signals):
+    x_removed = x[x < x_t[0] & x > x_t[1]]
+    y_removed = y[y < y_t[0] & y > y_t[1]]
+    z_removed = z[z < z_t[0] & z > z_t[1]]
+
+    rs, thetas, phis = utils.cartesian_to_spherical_np(x_removed, y_removed, z_removed)
+
+    return thetas, phis
+
+def remove_max_2D(x, r, results, phis, thetas, output_signals, target_theta=None, target_phi=None, d_theta=None, d_phi=None):
     filtered_x = x.copy()
     N_array = len(r[0])
 
@@ -100,6 +111,7 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals):
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
     filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.3)
+    filtered_peak_thetas, filtered_peak_phis = remove_target(filtered_peak_thetas, filtered_peak_phis, target_theta, target_phi, d_theta, d_phi)
 
     for k in range(0, min(params.num_peaks_to_remove, len(filtered_peak_thetas))):
         theta_to_remove = filtered_peak_thetas[k]
@@ -119,6 +131,9 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals):
 
     print("\n\n")
     return filtered_x
+
+
+
 
 
 def remove_components_1D_theta(x, r, results, phi, thetas, output_signals):
