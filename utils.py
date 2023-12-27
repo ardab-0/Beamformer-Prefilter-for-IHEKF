@@ -103,3 +103,10 @@ def spherical_to_cartesian_np(r, theta, phi):
     z = r * np.cos(theta)
 
     return x, y, z
+
+def spherical_to_cartesian(r, theta, phi):
+    x = r * math.sin(theta) * math.cos(phi)
+    y = r * math.sin(theta) * math.sin(phi)
+    z = r * math.cos(theta)
+
+    return x, y, z
