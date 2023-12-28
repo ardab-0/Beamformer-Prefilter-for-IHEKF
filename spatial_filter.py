@@ -7,7 +7,7 @@ from settings.config import Parameters as params
 from scipy.signal import argrelextrema
 
 
-def remove_close_peaks(theta_peak, phi_peak, eps=0.1):
+def remove_close_peaks(theta_peak, phi_peak, sorted_maxima, eps=0.1):
     """
     needs further testing
 
@@ -38,7 +38,7 @@ def remove_close_peaks(theta_peak, phi_peak, eps=0.1):
             idx_set = idx_set - idx_to_remove
         idx_to_keep = list(idx_set)
 
-    return theta_peak[idx_to_keep], phi_peak[idx_to_keep]
+    return theta_peak[idx_to_keep], phi_peak[idx_to_keep], sorted_maxima[idx_to_keep]
 
 
 def remove_components_2D(x, r, results, phis, thetas, output_signals):
@@ -59,7 +59,7 @@ def remove_components_2D(x, r, results, phis, thetas, output_signals):
 
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
-    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.2)
+    filtered_peak_thetas, filtered_peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.2)
 
     for k in range(1, min(params.num_peaks_to_remove+1, len(filtered_peak_thetas))):
         theta_to_remove = filtered_peak_thetas[k]
@@ -80,17 +80,18 @@ def remove_components_2D(x, r, results, phis, thetas, output_signals):
     print("\n\n")
     return filtered_x
 
-def remove_target(peak_thetas, peak_phis, target_theta, target_phi, d_theta, d_phi):
+def remove_target(peak_thetas, peak_phis,sorted_maxima, target_theta, target_phi, d_theta, d_phi):
     x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
     x_t, y_t, z_t = utils.spherical_to_cartesian_np(1, [target_theta-d_theta/2, target_theta+d_theta/2], [target_phi-d_phi/2, target_phi+d_phi/2])
+    x_t = np.sort(x_t)
+    y_t = np.sort(y_t)
+    z_t = np.sort(z_t)
+    to_keep = np.logical_or(x < x_t[0], x > x_t[1]) & np.logical_or(y < y_t[0], y > y_t[1]) & np.logical_or(z < z_t[0], z > z_t[1])
 
-    x_removed = x[x < x_t[0] & x > x_t[1]]
-    y_removed = y[y < y_t[0] & y > y_t[1]]
-    z_removed = z[z < z_t[0] & z > z_t[1]]
-
-    rs, thetas, phis = utils.cartesian_to_spherical_np(x_removed, y_removed, z_removed)
-
-    return thetas, phis
+    not_to_keep = np.logical_not(to_keep)
+    print("Detected target thetas: ", peak_thetas[not_to_keep])
+    print("Detected target phis: ", peak_phis[not_to_keep])
+    return peak_thetas[to_keep], peak_phis[to_keep], sorted_maxima[to_keep]
 
 def remove_max_2D(x, r, results, phis, thetas, output_signals, target_theta=None, target_phi=None, d_theta=None, d_phi=None):
     filtered_x = x.copy()
@@ -110,8 +111,10 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals, target_theta=None
 
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
-    filtered_peak_thetas, filtered_peak_phis = remove_close_peaks(peak_thetas, peak_phis, eps=0.3)
-    filtered_peak_thetas, filtered_peak_phis = remove_target(filtered_peak_thetas, filtered_peak_phis, target_theta, target_phi, d_theta, d_phi)
+    filtered_peak_thetas, filtered_peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.3)
+
+    if target_theta is not None and target_phi is not None and d_theta is not None and d_phi is not None:
+        filtered_peak_thetas, filtered_peak_phis, sorted_maxima = remove_target(filtered_peak_thetas, filtered_peak_phis, sorted_maxima, target_theta, target_phi, d_theta, d_phi)
 
     for k in range(0, min(params.num_peaks_to_remove, len(filtered_peak_thetas))):
         theta_to_remove = filtered_peak_thetas[k]
