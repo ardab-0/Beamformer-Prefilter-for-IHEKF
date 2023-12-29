@@ -47,9 +47,32 @@ class CaponBeamformer:
             raise TypeError("Wrong compute type.")
 
 
-    def __compute_beampatern_cpu_np(self, x, N_theta, N_phi, fs, r):
-        raise NotImplementedError
-    def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
+    def __compute_beampatern_cpu_np(self, x, thetas, phis, fs, r):
+        x = np.asmatrix(x)
+        N_array, N = x.shape
+        R = x @ x.H
+        Rinv = np.linalg.pinv(R)
+        theta_sweep, phi_sweep = np.meshgrid(thetas, phis)
+        u_sweep = np.array(
+            [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
+             np.cos(theta_sweep)])
+
+        v = np.tensordot(r.T, u_sweep, axes=1)
+        a = np.exp(1j * 2 * np.pi * params.f * v / params.c)
+
+        c = 1 / (a.H @ Rinv @ a)[0, 0]
+        w = Rinv @ a * c
+        out = w.H @ x
+
+        out = np.tensordot(x.T, H, axes=1)
+        out /= N_array
+        output_signals = np.transpose(out, (1, 2, 0))
+        results = np.mean(np.abs(out) ** 2, axis=0)
+        # results /= np.max(results)
+        results = np.sqrt(results)  # power to amplitude conversion
+        return results, output_signals, thetas, phis
+
+    def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):
         raise NotImplementedError
 
 
@@ -71,16 +94,16 @@ class CaponBeamformer:
                 a = r.T @ u_sweep
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
-                c = 1 / (a.H @ Rinv @ a)[0,0]
+                c = 1 / (a.H @ Rinv @ a)[0, 0]
                 w = Rinv @ a * c
                 out = w.H @ x
-                out /= N_array
+
                 c = np.linalg.norm(out)
                 results[k, l] = c
 
                 output_signals[k, l, :] = out
 
-        # results /= np.max(results)  # normalize
+        results /= np.max(results)  # normalize
         output_signals = np.transpose(output_signals, (1, 0, 2))
         # results = np.sqrt(results)  # power to amplitude conversion
         return results.T, output_signals, thetas, phis
