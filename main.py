@@ -18,9 +18,9 @@ antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # s
 
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[0, 45, 45], t=[-1, -1.5, 3], element_positions=antenna_element_positions)
-ant2 = AntennaArray(rot=[0, 45, 185], t=[2, 0.5, 3], element_positions=antenna_element_positions)
-ant3 = AntennaArray(rot=[0, 45, -60], t=[-1, 1.5, 3], element_positions=antenna_element_positions)
+ant1 = AntennaArray(rot=[0, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+ant2 = AntennaArray(rot=[0, 45, 185], t=[4, 1, 3], element_positions=antenna_element_positions)
+ant3 = AntennaArray(rot=[0, 45, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1, ant2, ant3]
 
 # initial state
@@ -60,6 +60,15 @@ for k in range(len(beacon_pos[0])):
             ant_pos = antenna.get_antenna_positions()
             ant_pos_m_i = ant_pos[:, : i]
             ant_pos_i.append(ant_pos_m_i)
+
+            # find target dir with respect to antenna
+            target_dir = beacon_pos[:3, k].reshape((-1, 1)) - antenna.get_t()
+            target_dir_r, target_dir_theta, target_dir_phi = utils.cartesian_to_spherical(target_dir[0], target_dir[1], target_dir[2])
+
+            for multipath in multipath_sources:
+                dir = np.array([multipath["x"], multipath["y"], multipath["z"]]).reshape((-1, 1)) - antenna.get_t()
+                m_r, m_t, m_p = utils.cartesian_to_spherical(dir[0], dir[1], dir[2])
+                print(f"Multipath direction theta: {m_t}, phi: {m_p}")
 
             if params.use_multipath:
 
@@ -115,9 +124,20 @@ for k in range(len(beacon_pos[0])):
                         cartesian_beampattern_list.append(beampattern_cartesian)
 
                     if params.apply_spatial_filter:
-                        s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos_m_i,
-                                                   results=results, phis=phis, thetas=thetas,
-                                                   output_signals=output_signals)
+                        # s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos_m_i,
+                        #                            results=results, phis=phis, thetas=thetas,
+                        #                            output_signals=output_signals)
+                        s_m = spatial_filter.remove_max_2D(x=s_m,
+                                                     r=ant_pos_m_i,
+                                                     results=results,
+                                                     phis=phis,
+                                                     thetas=thetas,
+                                                     output_signals=output_signals,
+                                                     target_theta=target_dir_theta,
+                                                     target_phi=target_dir_phi,
+                                                     d_theta=np.deg2rad(params.target_theta_range_deg),
+                                                     d_phi=np.deg2rad(params.target_phi_range_deg))
+
                         if params.visualize_beampatterns:
                             results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
                                                                                                    N_theta=params.N_theta,
