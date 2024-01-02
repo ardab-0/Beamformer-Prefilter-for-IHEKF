@@ -132,4 +132,6 @@ def get_A_full(antenna_pos):
 
 
 def compute_phase_shift(x, f, u, r):
-    return x * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)
+    x_fft = np.fft.fft(x)
+    x_fft_k = x_fft * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)
+    return np.fft.ifft(x_fft_k)
