@@ -1,10 +1,10 @@
 from itertools import combinations
 import utils
 import numpy as np
-
 from measurement_simulation import compute_phase_shift
 from settings.config import Parameters as params
 from scipy.signal import argrelextrema
+import matplotlib.pyplot as plt
 
 
 def remove_close_peaks(theta_peak, phi_peak, sorted_maxima, eps=0.1):
@@ -12,6 +12,7 @@ def remove_close_peaks(theta_peak, phi_peak, sorted_maxima, eps=0.1):
     removes peaks that are closer than eps
     needs further testing
 
+    :param sorted_maxima: sorted maxima indices
     :param theta_peak: thetas of peaks
     :param phi_peak: phis of peaks
     :param eps: threshold to consider peaks close
@@ -82,6 +83,70 @@ def remove_components_2D(x, r, results, phis, thetas, output_signals, peak_thres
     return filtered_x
 
 
+def remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamformer, antenna, target_theta, target_phi,
+                                 eps, peak_threshold):
+    r = antenna.get_antenna_positions()
+    u = np.array(
+        [np.sin(target_theta) * np.cos(target_phi), np.sin(target_theta) * np.sin(target_phi), np.cos(target_theta)])
+    k = -2 * np.pi * params.f / params.c * u
+    a_k = np.exp(-1j * k.T @ r).reshape((-1, 1))
+
+    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=a_k,
+                                                                           N_theta=params.N_theta,
+                                                                           N_phi=params.N_phi,
+                                                                           fs=params.fs,
+                                                                           r=r)
+
+    maxima = utils.find_relative_maxima(results, threshold=peak_threshold)
+    max_val = results[maxima[:, 0], maxima[:, 1]]
+    arg_max_val = max_val.argsort()[::-1]
+    sorted_maxima_ideal = maxima[arg_max_val]
+
+    ideal_peak_thetas = thetas[sorted_maxima_ideal[:, 1]]
+    ideal_peak_phis = phis[sorted_maxima_ideal[:, 0]]
+    x_ideal, y_ideal, z_ideal = utils.spherical_to_cartesian_np(1, ideal_peak_thetas, ideal_peak_phis)
+
+    x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
+
+    dx = x.reshape((-1, 1)) - x_ideal.reshape((1, -1))
+    dy = y.reshape((-1, 1)) - y_ideal.reshape((1, -1))
+    dz = z.reshape((-1, 1)) - z_ideal.reshape((1, -1))
+    d = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    matching_peaks = d <= eps
+    atleast_one_matching_peak = np.sum(matching_peaks.astype(int), axis=1)
+    idx_to_keep = atleast_one_matching_peak == 0
+
+    return peak_thetas[idx_to_keep], peak_phis[idx_to_keep], sorted_maxima[idx_to_keep]
+
+    # fig = plt.figure()
+    # ax = plt.axes(projection="3d")
+    # ax.set_xlim(params.room_x)
+    # ax.set_ylim(params.room_y)
+    # ax.set_zlim(params.room_z)
+    #
+    # ax.set_xlabel("x(m)")
+    # ax.set_ylabel("y(m)")
+    # ax.set_zlabel("z(m)")
+    #
+    # beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
+    # beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
+    #
+    # ax.scatter3D(beampattern_cartesian[0, :], beampattern_cartesian[1, :], beampattern_cartesian[2, :])
+    #
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    #
+    # theta, phi = np.meshgrid(thetas, phis)
+    #
+    # surf = ax.plot_surface(theta, phi, results,
+    #                        linewidth=0, antialiased=False)
+    # ax.set_xlabel("theta (rad)")
+    # ax.set_ylabel("phi (rad)")
+    # ax.set_zlabel("power")
+    # # Add a color bar which maps values to colors.
+    # fig.colorbar(surf, shrink=0.5, aspect=5)
+    # plt.show()
+
+
 def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_phi, d_theta, d_phi):
     """
     removes target from the peak lists
@@ -109,12 +174,11 @@ def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_ph
     return peak_thetas[to_keep], peak_phis[to_keep], sorted_maxima[to_keep]
 
 
-def iterative_max_2D_filter(x, r, beamformer, antenna, target_theta=None, target_phi=None,
+def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_theta=None, target_phi=None,
                             d_theta=None, d_phi=None):
     is_peak_removed = True
     filtered_x = None
     i = 0
-    peak_threshold = 0.3
     while is_peak_removed:
         print(f"Iterative max 2d filter, iter: {i}, threshold: {peak_threshold}")
         results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
@@ -138,18 +202,24 @@ def iterative_max_2D_filter(x, r, beamformer, antenna, target_theta=None, target
                                                     d_theta=d_theta,
                                                     d_phi=d_phi,
                                                     peak_threshold=peak_threshold,
-                                                    num_of_removed_signals=1)
+                                                    num_of_removed_signals=1,
+                                                    beamformer=beamformer,
+                                                    antenna=antenna)
 
         x = filtered_x
 
-        i+=1
+        i += 1
     return filtered_x
 
 
 def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_signals=None,
-                  target_theta=None, target_phi=None, d_theta=None, d_phi=None, peak_threshold=params.peak_threshold):
+                  target_theta=None, target_phi=None, d_theta=None, d_phi=None, peak_threshold=params.peak_threshold,
+                  beamformer=None, antenna=None, eps=0.1):
     """
 
+    :param eps:
+    :param beamformer: used beamformer
+    :param antenna: current antenna array
     :param x: input signal
     :param r: antenna positions
     :param results: beamformer pattern
@@ -180,24 +250,28 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_si
 
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
-    filtered_peak_thetas, filtered_peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima,
-                                                                                 eps=0.3)
+
 
     if target_theta is not None and target_phi is not None and d_theta is not None and d_phi is not None:
-        filtered_peak_thetas, filtered_peak_phis, sorted_maxima = remove_target(filtered_peak_thetas,
-                                                                                filtered_peak_phis, sorted_maxima,
-                                                                                target_theta, target_phi, d_theta,
-                                                                                d_phi)
+        # without sidelobe
+        peak_thetas, peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.3)
+        peak_thetas, peak_phis, sorted_maxima = remove_target(peak_thetas,
+                                                              peak_phis, sorted_maxima,
+                                                              target_theta, target_phi, d_theta,
+                                                              d_phi)
+        # with sidelobe
+        # peak_thetas, peak_phis, sorted_maxima = remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamformer, antenna, target_theta,
+        #                              target_phi, 0.15, peak_threshold)
 
-    if len(filtered_peak_thetas) == 0:
+    if len(peak_thetas) == 0:
         return filtered_x, False
 
     if num_of_removed_signals is None:
-        num_of_removed_signals = len(filtered_peak_thetas)
+        num_of_removed_signals = len(peak_thetas)
 
-    for k in range(0, min(num_of_removed_signals, len(filtered_peak_thetas))):
-        theta_to_remove = filtered_peak_thetas[k]
-        phi_to_remove = filtered_peak_phis[k]
+    for k in range(0, min(num_of_removed_signals, len(peak_thetas))):
+        theta_to_remove = peak_thetas[k]
+        phi_to_remove = peak_phis[k]
         print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")
 
         u = np.array(
