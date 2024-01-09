@@ -130,6 +130,15 @@ def generate_antenna_element_positions(kind: str, lmb: float, get_A_full: bool=F
         A_full = sim.get_A_full(antenna_element_positions)
 
         return antenna_element_positions, A_full
+    elif kind == "square_6_6":
+        t = np.arange(0, 6)* lmb/2
+        x, y = np.meshgrid(t, t)
+
+        antenna_element_positions = np.stack([x, np.zeros_like(x), -y]).reshape((3, -1))
+
+        A_full = sim.get_A_full(antenna_element_positions)
+
+        return antenna_element_positions, A_full
 
     elif kind == "square_8_8":
         t = np.arange(0, 8)* lmb/2
