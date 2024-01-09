@@ -60,7 +60,7 @@ def generate_spiral_path(a, theta_extent, alpha):
 
     x = a * np.cos(theta) * scaling
     y = a * np.sin(theta) * scaling
-    z = a * theta * np.tan(alpha)
+    z = a * theta * np.tan(alpha) + 2
     return np.array([x, y, z]).reshape((3, -1))
 
 

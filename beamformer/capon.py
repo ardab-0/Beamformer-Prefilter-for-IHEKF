@@ -60,11 +60,14 @@ class CaponBeamformer:
         v = np.tensordot(r.T, u_sweep, axes=1)
         a = np.exp(1j * 2 * np.pi * params.f * v / params.c)
 
-        c = 1 / (a.H @ Rinv @ a)[0, 0]
-        w = Rinv @ a * c
+        # c = 1 / (a.conj().T @ Rinv @ a)[0, 0]
+        m = np.tensordot(a.conj().T, Rinv, axes=1)
+        m = np.tensordot(m, a, axes=1)
+        c = 1 / m
+        w = np.tensordot(Rinv, a, axes=1) * c
         out = w.H @ x
 
-        out = np.tensordot(x.T, H, axes=1)
+        # out = np.tensordot(x.T, H, axes=1)
         out /= N_array
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
@@ -83,8 +86,8 @@ class CaponBeamformer:
         output_signals = np.zeros((len(thetas), len(phis), N), dtype=np.complex64)
         results = np.zeros((len(thetas), len(phis)))
         x = np.asmatrix(x)
-        # Calc covariance matrix
-        R = x @ x.H  # gives a Nr x Nr covariance matrix of the samples
+
+        R = x @ x.H
 
         Rinv = np.linalg.pinv(R)  # pseudo-inverse tends to work better than a true inverse
         for k, theta_i in enumerate(thetas):
@@ -95,15 +98,16 @@ class CaponBeamformer:
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
                 c = 1 / (a.H @ Rinv @ a)[0, 0]
+                results[k, l] = np.square(np.abs(c))
                 w = Rinv @ a * c
                 out = w.H @ x
 
                 c = np.linalg.norm(out)
-                results[k, l] = c
+
 
                 output_signals[k, l, :] = out
-
-        results /= np.max(results)  # normalize
+        # results = 10*np.log10(results)
+        results /= np.max(results)
         output_signals = np.transpose(output_signals, (1, 0, 2))
         # results = np.sqrt(results)  # power to amplitude conversion
         return results.T, output_signals, thetas, phis

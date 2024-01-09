@@ -1,3 +1,4 @@
+import sys
 from itertools import combinations
 import utils
 import numpy as np
@@ -97,7 +98,7 @@ def remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamform
                                                                            fs=params.fs,
                                                                            r=r)
 
-    maxima = utils.find_relative_maxima(results, threshold=peak_threshold)
+    maxima = utils.find_relative_maxima(results, threshold=0.3) #####################################################################################################################################
     max_val = results[maxima[:, 0], maxima[:, 1]]
     arg_max_val = max_val.argsort()[::-1]
     sorted_maxima_ideal = maxima[arg_max_val]
@@ -116,7 +117,6 @@ def remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamform
     atleast_one_matching_peak = np.sum(matching_peaks.astype(int), axis=1)
     idx_to_keep = atleast_one_matching_peak == 0
 
-    return peak_thetas[idx_to_keep], peak_phis[idx_to_keep], sorted_maxima[idx_to_keep]
 
     # fig = plt.figure()
     # ax = plt.axes(projection="3d")
@@ -145,6 +145,8 @@ def remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamform
     # # Add a color bar which maps values to colors.
     # fig.colorbar(surf, shrink=0.5, aspect=5)
     # plt.show()
+    return peak_thetas[idx_to_keep], peak_phis[idx_to_keep], sorted_maxima[idx_to_keep]
+
 
 
 def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_phi, d_theta, d_phi):
@@ -175,11 +177,11 @@ def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_ph
 
 
 def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_theta=None, target_phi=None,
-                            d_theta=None, d_phi=None):
+                            d_theta=None, d_phi=None, max_iteration=sys.maxsize):
     is_peak_removed = True
     filtered_x = None
     i = 0
-    while is_peak_removed:
+    while is_peak_removed and i < max_iteration:
         print(f"Iterative max 2d filter, iter: {i}, threshold: {peak_threshold}")
         results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
                                                                                N_theta=params.N_theta,
@@ -259,9 +261,9 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_si
                                                               peak_phis, sorted_maxima,
                                                               target_theta, target_phi, d_theta,
                                                               d_phi)
-        # with sidelobe
+        # # with sidelobe
         # peak_thetas, peak_phis, sorted_maxima = remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamformer, antenna, target_theta,
-        #                              target_phi, 0.15, peak_threshold)
+        #                              target_phi, 0.1, peak_threshold)
 
     if len(peak_thetas) == 0:
         return filtered_x, False
