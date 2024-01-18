@@ -110,3 +110,21 @@ def spherical_to_cartesian(r, theta, phi):
     z = r * math.cos(theta)
 
     return x, y, z
+
+
+
+def cone_filter(cartesian_points, target_theta, target_phi, cone_angle):
+    """
+
+    :param cartesian_points: 3xN
+    :param target_theta: rad
+    :param target_phi: rad
+    :param cone_angle: rad
+    :return:
+    """
+    dir = np.array([np.sin(target_theta) * np.cos(target_phi), np.sin(target_theta) * np.sin(target_phi),
+                    np.cos(target_theta)])
+    cartesian_points_normalized = cartesian_points / np.linalg.norm(cartesian_points, axis=0)
+    projection = dir @ cartesian_points_normalized
+    kept_idx = projection > np.cos(cone_angle)
+    return kept_idx
