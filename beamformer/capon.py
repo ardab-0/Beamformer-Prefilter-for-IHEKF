@@ -62,17 +62,22 @@ class CaponBeamformer:
 
         # c = 1 / (a.conj().T @ Rinv @ a)[0, 0]
         m = np.tensordot(a.conj().T, Rinv, axes=1)
-        m = np.tensordot(m, a, axes=1)
+        m = m[:, :, np.newaxis, :]
+        m = m @ a.T[:, :, :, np.newaxis]
+        m = np.squeeze(m)
+        # m = np.tensordot(m, a, axes=1)
         c = 1 / m
-        w = np.tensordot(Rinv, a, axes=1) * c
-        out = w.H @ x
+        w = np.tensordot(Rinv, a, axes=1) * c.T
+        out = np.tensordot(w.conj().T, x, axes=1)
 
         # out = np.tensordot(x.T, H, axes=1)
-        out /= N_array
+        # out /= N_array
+        out = out.T
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
-        # results /= np.max(results)
-        results = np.sqrt(results)  # power to amplitude conversion
+        results = np.sqrt(results)
+        results /= np.max(results)
+
         return results, output_signals, thetas, phis
 
     def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):

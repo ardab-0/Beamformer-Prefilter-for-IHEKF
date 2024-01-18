@@ -15,13 +15,13 @@ visualize = False
 ################### params
 np.random.seed(1)
 
-antenna_element_positions, A_full = generate_antenna_element_positions(kind="regular_8_2", lmb=params.lmb,
+antenna_element_positions, A_full = generate_antenna_element_positions(kind="irregular_8_2", lmb=params.lmb,
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[0, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+ant1 = AntennaArray(rot=[30, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1]
 
 fs = 100 * params.f
@@ -105,27 +105,25 @@ for k in range(len(beacon_pos[0])):
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-    s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
-                                                          r=ant_pos,
-                                                          beamformer=beamformer,
-                                                          antenna=antenna,
-                                                          peak_threshold=0.1,
-                                                          target_theta=target_dir_theta,
-                                                          target_phi=target_dir_phi,
-                                                          d_theta=np.deg2rad(params.target_theta_range_deg),
-                                                          d_phi=np.deg2rad(params.target_phi_range_deg),
-                                                          max_iteration=1)
+    # s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
+    #                                                       r=ant_pos,
+    #                                                       beamformer=beamformer,
+    #                                                       antenna=antenna,
+    #                                                       peak_threshold=0.1,
+    #                                                       target_theta=target_dir_theta,
+    #                                                       target_phi=target_dir_phi,
+    #                                                       cone_angle=np.deg2rad(params.cone_angle),
+    #                                                       max_iteration=1)
 
-    # s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
-    #                                               r=ant_pos,
-    #                                               beamformer=beamformer,
-    #                                               antenna=antenna,
-    #                                               peak_threshold=0.1,
-    #                                               target_theta=target_dir_theta,
-    #                                               target_phi=target_dir_phi,
-    #                                               d_theta=np.deg2rad(params.target_theta_range_deg),
-    #                                               d_phi=np.deg2rad(params.target_phi_range_deg),
-    #                                               num_of_removed_signals=1)
+    s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
+                                                  r=ant_pos,
+                                                  beamformer=beamformer,
+                                                  antenna=antenna,
+                                                  peak_threshold=0.1,
+                                                  target_theta=target_dir_theta,
+                                                  target_phi=target_dir_phi,
+                                                  cone_angle=np.deg2rad(params.cone_angle),
+                                                  num_of_removed_signals=1)
 
     # s_m_filtered = spatial_filter.multipath_filter(x=s_m,
     #                                                       r=ant_pos,
@@ -178,7 +176,7 @@ for k in range(len(beacon_pos[0])):
 
         plt.figure()
         for i in range(len(s_m)):
-            r = int(np.sqrt(len(s_m)))
+            r = int(np.ceil(np.sqrt(len(s_m))))
             plt.subplot(r, r, i + 1)
             plt.plot((s_m[i, :]), label="s_m")
             plt.plot((s_m_filtered[i, :]), label="s_m filtered")
