@@ -187,15 +187,15 @@ def keep_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_phi,
     """
     x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
 
-
-    to_keep = utils.cone_filter(np.stack([x, y, z]), target_theta=target_theta, target_phi=target_phi, cone_angle=cone_angle)
+    to_keep = utils.cone_filter(np.stack([x, y, z]), target_theta=target_theta, target_phi=target_phi,
+                                cone_angle=cone_angle)
 
     print("Detected target thetas: ", peak_thetas[to_keep])
     print("Detected target phis: ", peak_phis[to_keep])
     return peak_thetas[to_keep], peak_phis[to_keep], sorted_maxima[to_keep]
 
 
-def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_phi, d_theta, d_phi):
+def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_phi, cone_angle):
     """
     removes target from the peak lists
     :param peak_thetas:
@@ -208,15 +208,11 @@ def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_ph
     :return:
     """
     x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
-    x_t, y_t, z_t = utils.spherical_to_cartesian_np(1, [target_theta - d_theta / 2, target_theta + d_theta / 2],
-                                                    [target_phi - d_phi / 2, target_phi + d_phi / 2])
-    x_t = np.sort(x_t)
-    y_t = np.sort(y_t)
-    z_t = np.sort(z_t)
-    to_keep = np.logical_or(x < x_t[0], x > x_t[1]) & np.logical_or(y < y_t[0], y > y_t[1]) & np.logical_or(z < z_t[0],
-                                                                                                            z > z_t[1])
 
-    not_to_keep = np.logical_not(to_keep)
+    not_to_keep = utils.cone_filter(np.stack([x, y, z]), target_theta=target_theta, target_phi=target_phi,
+                                cone_angle=cone_angle)
+
+    to_keep = np.logical_not(not_to_keep)
     print("Detected target thetas: ", peak_thetas[not_to_keep])
     print("Detected target phis: ", peak_phis[not_to_keep])
     return peak_thetas[to_keep], peak_phis[to_keep], sorted_maxima[to_keep]
@@ -422,7 +418,7 @@ def multipath_search_filter(x, r, beamformer, antenna, peak_threshold, target_th
 
 
 def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_theta=None, target_phi=None,
-                            d_theta=None, d_phi=None, max_iteration=sys.maxsize):
+                            cone_angle=None,max_iteration=sys.maxsize):
     """
     removes the peaks iteratively while keeping the target peaks intact
 
@@ -461,8 +457,7 @@ def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_th
                                                     output_signals=output_signals,
                                                     target_theta=target_theta,
                                                     target_phi=target_phi,
-                                                    d_theta=d_theta,
-                                                    d_phi=d_phi,
+                                                    cone_angle=cone_angle,
                                                     peak_threshold=peak_threshold,
                                                     num_of_removed_signals=1,
                                                     beamformer=beamformer,
@@ -475,7 +470,7 @@ def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_th
 
 
 def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_signals=None,
-                  target_theta=None, target_phi=None, d_theta=None, d_phi=None, peak_threshold=params.peak_threshold,
+                  target_theta=None, target_phi=None, cone_angle=None, peak_threshold=params.peak_threshold,
                   beamformer=None, antenna=None, eps=0.1):
     """
     removes the maximum k (num_of_removed_signals) peaks from the signal simultaneously
@@ -514,13 +509,13 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_si
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
 
-    if target_theta is not None and target_phi is not None and d_theta is not None and d_phi is not None:
+    if target_theta is not None and target_phi is not None and  cone_angle is not None:
         # without sidelobe
         peak_thetas, peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.3)
         peak_thetas, peak_phis, sorted_maxima = remove_target(peak_thetas,
                                                               peak_phis, sorted_maxima,
-                                                              target_theta, target_phi, d_theta,
-                                                              d_phi)
+                                                              target_theta, target_phi, cone_angle,
+                                                              )
         # # with sidelobe
         # peak_thetas, peak_phis, sorted_maxima = remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamformer, antenna, target_theta,
         #                              target_phi, 0.1, peak_threshold)
@@ -590,7 +585,6 @@ def remove_components_1D_theta(x, r, results, phi, thetas, output_signals):
 
 def multipath_filter(x, r, beamformer, antenna, peak_threshold, target_theta, target_phi, cone_angle,
                      ):
-
     filtered_x = x.copy()
     N_array = len(r[0])
     results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
@@ -624,8 +618,8 @@ def multipath_filter(x, r, beamformer, antenna, peak_threshold, target_theta, ta
                                                                                            sorted_maxima,
                                                                                            target_theta,
                                                                                            target_phi,
-                                                                                           d_theta,
-                                                                                           d_phi)
+                                                                                           cone_angle=cone_angle,
+                                                                                           )
 
     detected_target_theta = target_peak_thetas[0]
     detected_target_phi = target_peak_phis[0]
@@ -667,7 +661,7 @@ def multipath_filter(x, r, beamformer, antenna, peak_threshold, target_theta, ta
                                                                                fs=params.fs,
                                                                                r=antenna.get_antenna_positions())
 
-        error = np.sqrt(np.mean((reference_beampattern - results)**2))
+        error = np.sqrt(np.mean((reference_beampattern - results) ** 2))
         errors.append(error)
         # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         #
