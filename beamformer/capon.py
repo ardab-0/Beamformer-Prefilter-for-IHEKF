@@ -103,7 +103,7 @@ class CaponBeamformer:
                 a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
                 c = 1 / (a.H @ Rinv @ a)[0, 0]
-                results[k, l] = np.square(np.abs(c))
+                results[k, l] = np.abs(c)
                 w = Rinv @ a * c
                 out = w.H @ x
 

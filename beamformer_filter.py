@@ -10,10 +10,10 @@ import measurement_simulation as sim
 import spatial_filter
 
 #################### params
-visualize = False
+visualize = True
 
 ################### params
-np.random.seed(1)
+np.random.seed(10)
 
 antenna_element_positions, A_full = generate_antenna_element_positions(kind="irregular_8_2", lmb=params.lmb,
                                                                        get_A_full=True)
@@ -21,7 +21,7 @@ antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # s
 
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[30, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+ant1 = AntennaArray(rot=[0, 0, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1]
 
 fs = 100 * params.f
@@ -46,7 +46,7 @@ for k in range(len(beacon_pos[0])):
         {"x": beacon_pos[0, k],
          "y": beacon_pos[1, k],
          "z": -beacon_pos[2, k],
-         "a": 0.9}]
+         "a": 0.9 + np.random.randn(1)*0.1}]
     print(f"Target direction theta: {target_dir_theta}, phi: {target_dir_phi}")
     for multipath in multipath_sources:
         dir = np.array([multipath["x"], multipath["y"], multipath["z"]]).reshape((-1, 1)) - antenna.get_t()
@@ -55,7 +55,7 @@ for k in range(len(beacon_pos[0])):
 
     s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos,
                                     beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                    phi_B=phi_B, sigma=0.01, multipath_sources=multipath_sources)
+                                    phi_B=phi_B, sigma=0.05, multipath_sources=multipath_sources)
 
     s_m_no_multipath = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos,
                                                  beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
@@ -75,7 +75,7 @@ for k in range(len(beacon_pos[0])):
 
         element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas,
                                                                                       phis=phis)
-
+        results *= element_beampattern
         fig = plt.figure()
         ax = plt.axes(projection="3d")
         ax.set_xlim(params.room_x)
@@ -93,6 +93,9 @@ for k in range(len(beacon_pos[0])):
         ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
         ax.scatter3D(beacon_pos[0, k], beacon_pos[1, k], beacon_pos[2, k], c="red")
 
+        for multipath in multipath_sources:
+            ax.scatter3D(multipath["x"], multipath["y"], multipath["z"], "red")
+
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
         theta, phi = np.meshgrid(thetas, phis)
@@ -105,6 +108,7 @@ for k in range(len(beacon_pos[0])):
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
+    s_m_filtered = s_m
     # s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
     #                                                       r=ant_pos,
     #                                                       beamformer=beamformer,
@@ -132,19 +136,31 @@ for k in range(len(beacon_pos[0])):
     #                                                       peak_threshold=0.3,
     #                                                       target_theta=target_dir_theta,
     #                                                       target_phi=target_dir_phi,
-    #                                                       d_theta=np.deg2rad(params.target_theta_range_deg),
-    #                                                       d_phi=np.deg2rad(params.target_phi_range_deg))
+    #                                                       cone_angle=np.deg2rad(params.cone_angle),
+    #                                                       )
+
+    # s_m_filtered = spatial_filter.ground_reflection_filter(x=s_m,
+    #                                                        r=ant_pos,
+    #                                                        beamformer=beamformer,
+    #                                                        antenna=antenna,
+    #                                                        peak_threshold=0.1,
+    #                                                        target_x=beacon_pos[0, k],
+    #                                                        target_y=beacon_pos[1, k],
+    #                                                        target_z=beacon_pos[2, k],
+    #                                                        cone_angle=np.deg2rad(params.cone_angle),
+    #                                                        )
 
     phi_filtered = sim.measure_phi(s_m=s_m_filtered, f_m=params.f, t=t)
     recorded_phi_filtered_differences.append(utils.mod_2pi(A_full @ phi_filtered))
 
     if visualize:
+        beamformer = generate_beamformer(beamformer_type="delay_and_sum")
         results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m_filtered,
                                                                                N_theta=params.N_theta,
                                                                                N_phi=params.N_phi,
                                                                                fs=fs,
                                                                                r=ant_pos)
-
+        results *= element_beampattern
         fig = plt.figure()
         ax = plt.axes(projection="3d")
         ax.set_xlim(params.room_x)
