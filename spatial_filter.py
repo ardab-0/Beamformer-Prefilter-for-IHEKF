@@ -2,7 +2,7 @@ import sys
 from itertools import combinations
 import utils
 import numpy as np
-from measurement_simulation import compute_phase_shift
+from measurement_simulation import compute_phase_shift, compute_phase_shift_near_field
 from settings.config import Parameters as params
 from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
@@ -210,7 +210,7 @@ def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_ph
     x, y, z = utils.spherical_to_cartesian_np(1, peak_thetas, peak_phis)
 
     not_to_keep = utils.cone_filter(np.stack([x, y, z]), target_theta=target_theta, target_phi=target_phi,
-                                cone_angle=cone_angle)
+                                    cone_angle=cone_angle)
 
     to_keep = np.logical_not(not_to_keep)
     print("Detected target thetas: ", peak_thetas[not_to_keep])
@@ -286,13 +286,64 @@ def two_step_filter(x, r, num_of_removed_signals=None,
 
         signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
         for i in range(N_array):
-            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
-
+            # signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
+            signal_to_remove_at_antenna[i, :] = (signal_to_remove, params.f, u, r[:, i])
         filtered_x -= signal_to_remove_at_antenna
 
     filtered_x = x - filtered_x
 
     return filtered_x, True
+
+
+def ground_reflection_filter(x, r, target_x, target_y, target_z, cone_angle, peak_threshold, beamformer, antenna):
+    reflection_dir = np.array([target_x, target_y, -target_z]).reshape((-1, 1)) - antenna.get_t()
+    reflection_r, reflection_theta, reflection_phi = utils.cartesian_to_spherical(reflection_dir[0], reflection_dir[1], reflection_dir[2])
+    filtered_x = x.copy()
+    N_array = len(r[0])
+    results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
+                                                                           N_theta=params.N_theta,
+                                                                           N_phi=params.N_phi,
+                                                                           fs=params.fs,
+                                                                           r=antenna.get_antenna_positions())
+
+    element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas,
+                                                                                  phis=phis)
+    results *= element_beampattern
+
+    maxima = utils.find_relative_maxima(results, threshold=peak_threshold)
+    max_val = results[maxima[:, 0], maxima[:, 1]]
+    arg_max_val = max_val.argsort()[::-1]
+    sorted_maxima = maxima[arg_max_val]
+
+    peak_thetas = thetas[sorted_maxima[:, 1]]
+    peak_phis = phis[sorted_maxima[:, 0]]
+
+    peak_thetas, peak_phis, sorted_maxima = keep_target(peak_thetas,
+                                                        peak_phis,
+                                                        sorted_maxima,
+                                                        reflection_theta,
+                                                        reflection_phi,
+                                                        cone_angle=cone_angle
+                                                        )
+
+    if len(peak_thetas) == 0:
+        return filtered_x
+
+    theta_to_remove = peak_thetas[0]
+    phi_to_remove = peak_phis[0]
+    print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")
+
+    u = np.array(
+        [np.sin(theta_to_remove) * np.cos(phi_to_remove), np.sin(theta_to_remove) * np.sin(phi_to_remove),
+         np.cos(theta_to_remove)])
+    signal_to_remove = output_signals[sorted_maxima[0][0], sorted_maxima[0][1]]
+
+    signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
+    for i in range(N_array):
+        signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
+
+    filtered_x -= signal_to_remove_at_antenna
+    return filtered_x
 
 
 def multipath_search_filter(x, r, beamformer, antenna, peak_threshold, target_theta, target_phi,
@@ -418,7 +469,7 @@ def multipath_search_filter(x, r, beamformer, antenna, peak_threshold, target_th
 
 
 def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_theta=None, target_phi=None,
-                            cone_angle=None,max_iteration=sys.maxsize):
+                            cone_angle=None, max_iteration=sys.maxsize):
     """
     removes the peaks iteratively while keeping the target peaks intact
 
@@ -509,7 +560,7 @@ def remove_max_2D(x, r, results, phis, thetas, output_signals, num_of_removed_si
     peak_thetas = thetas[sorted_maxima[:, 1]]
     peak_phis = phis[sorted_maxima[:, 0]]
 
-    if target_theta is not None and target_phi is not None and  cone_angle is not None:
+    if target_theta is not None and target_phi is not None and cone_angle is not None:
         # without sidelobe
         peak_thetas, peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.3)
         peak_thetas, peak_phis, sorted_maxima = remove_target(peak_thetas,
