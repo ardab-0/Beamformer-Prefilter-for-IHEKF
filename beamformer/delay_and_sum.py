@@ -87,7 +87,7 @@ class DelayAndSumBeamformer:
                 a = np.exp(-1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
 
-                out = a.H @ x
+                out = a.H @ x / N_array
                 c = np.linalg.norm(out)
                 results[k, l] = c
 
