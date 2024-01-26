@@ -220,7 +220,7 @@ def remove_target(peak_thetas, peak_phis, sorted_maxima, target_theta, target_ph
 
 def two_step_filter(x, r, num_of_removed_signals=None,
                     target_theta=None, target_phi=None, cone_angle=None, peak_threshold=params.peak_threshold,
-                    beamformer=None, antenna=None):
+                    beamformer=None, antenna=None, target_position=None):
     """
     removes the target signal from the original signal, then removes remaining signal from the original signal
 
@@ -284,10 +284,23 @@ def two_step_filter(x, r, num_of_removed_signals=None,
              np.cos(theta_to_remove)])
         signal_to_remove = output_signals[sorted_maxima[k][0], sorted_maxima[k][1]]
 
+
+        t = np.arange(params.N) / params.fs
+        z = np.exp(1j * (2 * np.pi * params.f * (t.reshape((1, -1))) - np.pi / 2)).reshape(-1)
+        # plt.figure()
+        # plt.plot(signal_to_remove, label="beamformer")
+        # plt.plot(z, label="z")
+        # plt.legend()
+
         signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
         for i in range(N_array):
-            # signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
-            signal_to_remove_at_antenna[i, :] = (signal_to_remove, params.f, u, r[:, i])
+            if target_position is not None:
+                signal_to_remove_at_antenna[i, :] = compute_phase_shift_near_field(signal_to_remove, params.f, r[:, i],
+                                                                                   target_position)
+            else:
+                signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
+
+
         filtered_x -= signal_to_remove_at_antenna
 
     filtered_x = x - filtered_x
@@ -295,9 +308,10 @@ def two_step_filter(x, r, num_of_removed_signals=None,
     return filtered_x, True
 
 
-def ground_reflection_filter(x, r, target_x, target_y, target_z, cone_angle, peak_threshold, beamformer, antenna):
+def ground_reflection_filter(x, r, target_x, target_y, target_z, cone_angle, peak_threshold, beamformer, antenna, reflection_position=None):
     reflection_dir = np.array([target_x, target_y, -target_z]).reshape((-1, 1)) - antenna.get_t()
-    reflection_r, reflection_theta, reflection_phi = utils.cartesian_to_spherical(reflection_dir[0], reflection_dir[1], reflection_dir[2])
+    reflection_r, reflection_theta, reflection_phi = utils.cartesian_to_spherical(reflection_dir[0], reflection_dir[1],
+                                                                                  reflection_dir[2])
     filtered_x = x.copy()
     N_array = len(r[0])
     results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
@@ -340,7 +354,11 @@ def ground_reflection_filter(x, r, target_x, target_y, target_z, cone_angle, pea
 
     signal_to_remove_at_antenna = np.zeros((N_array, params.N), dtype=complex)
     for i in range(N_array):
-        signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
+        if reflection_position is not None:
+            signal_to_remove_at_antenna[i, :] = compute_phase_shift_near_field(signal_to_remove, params.f, r[:, i],
+                                                                               reflection_position)
+        else:
+            signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, params.f, u, r[:, i])
 
     filtered_x -= signal_to_remove_at_antenna
     return filtered_x

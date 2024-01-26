@@ -10,7 +10,7 @@ import measurement_simulation as sim
 import spatial_filter
 
 #################### params
-visualize = True
+visualize = False
 
 ################### params
 np.random.seed(10)
@@ -67,6 +67,10 @@ for k in range(len(beacon_pos[0])):
     recorded_phi_no_multipath_differences.append(utils.mod_2pi(A_full @ phi_no_multipath))
 
     if visualize:
+
+        z = np.exp(1j * ( 2 * np.pi * params.f * (t.reshape((1, -1))) + np.pi)).reshape(-1)
+        plt.plot(z.real)
+
         results, output_signals, thetas, phis = beamformer.compute_beampattern(x=s_m,
                                                                                N_theta=params.N_theta,
                                                                                N_phi=params.N_phi,
@@ -119,15 +123,16 @@ for k in range(len(beacon_pos[0])):
     #                                                       cone_angle=np.deg2rad(params.cone_angle),
     #                                                       max_iteration=1)
 
-    s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
-                                                  r=ant_pos,
-                                                  beamformer=beamformer,
-                                                  antenna=antenna,
-                                                  peak_threshold=0.1,
-                                                  target_theta=target_dir_theta,
-                                                  target_phi=target_dir_phi,
-                                                  cone_angle=np.deg2rad(params.cone_angle),
-                                                  num_of_removed_signals=1)
+    # s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
+    #                                               r=ant_pos,
+    #                                               beamformer=beamformer,
+    #                                               antenna=antenna,
+    #                                               peak_threshold=0.1,
+    #                                               target_theta=target_dir_theta,
+    #                                               target_phi=target_dir_phi,
+    #                                               cone_angle=np.deg2rad(params.cone_angle),
+    #                                               num_of_removed_signals=1,
+    #                                               )
 
     # s_m_filtered = spatial_filter.multipath_filter(x=s_m,
     #                                                       r=ant_pos,
@@ -139,16 +144,17 @@ for k in range(len(beacon_pos[0])):
     #                                                       cone_angle=np.deg2rad(params.cone_angle),
     #                                                       )
 
-    # s_m_filtered = spatial_filter.ground_reflection_filter(x=s_m,
-    #                                                        r=ant_pos,
-    #                                                        beamformer=beamformer,
-    #                                                        antenna=antenna,
-    #                                                        peak_threshold=0.1,
-    #                                                        target_x=beacon_pos[0, k],
-    #                                                        target_y=beacon_pos[1, k],
-    #                                                        target_z=beacon_pos[2, k],
-    #                                                        cone_angle=np.deg2rad(params.cone_angle),
-    #                                                        )
+    s_m_filtered = spatial_filter.ground_reflection_filter(x=s_m,
+                                                           r=ant_pos,
+                                                           beamformer=beamformer,
+                                                           antenna=antenna,
+                                                           peak_threshold=0.1,
+                                                           target_x=beacon_pos[0, k],
+                                                           target_y=beacon_pos[1, k],
+                                                           target_z=beacon_pos[2, k],
+                                                           cone_angle=np.deg2rad(params.cone_angle),
+                                                           # reflection_position=np.array([multipath["x"], multipath["y"], multipath["z"]])
+                                                           )
 
     phi_filtered = sim.measure_phi(s_m=s_m_filtered, f_m=params.f, t=t)
     recorded_phi_filtered_differences.append(utils.mod_2pi(A_full @ phi_filtered))

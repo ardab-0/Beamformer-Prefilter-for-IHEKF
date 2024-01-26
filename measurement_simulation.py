@@ -60,7 +60,7 @@ def measure_s_m_multipath(t, antenna_positions, beacon_pos, phi_B, sigma, multip
         tau = np.linalg.norm(antenna_positions - multipath_source_pos, axis=0) / params.c
         phi = 2 * np.pi * params.f * (t.reshape((1, -1)) - tau.reshape((-1, 1))) + phi_B
         s_m += a * np.exp(1j * phi)
-        print(f"Multipath {p}: a:{a}, x:{x}, y:{y}, z:{z}")
+        # print(f"Multipath {p}: a:{a}, x:{x}, y:{y}, z:{z}")
 
     n = np.random.randn(*s_m.shape) + 1j * np.random.randn(*s_m.shape)
     return s_m + sigma * n
@@ -133,5 +133,17 @@ def get_A_full(antenna_pos):
 
 def compute_phase_shift(x, f, u, r):
     x_fft = np.fft.fft(x)
-    x_fft_k = x_fft * np.exp(1j * 2 * np.pi * f * np.dot(u, r) / params.c)
+    tau = np.dot(u, r) / params.c
+    phi = 2 * np.pi * f * tau
+    # print("compute_phase_shift phi:", phi)
+    x_fft_k = x_fft * np.exp(1j * phi)
+    return np.fft.ifft(x_fft_k)
+
+
+def compute_phase_shift_near_field(x, f, r, target_position):
+    x_fft = np.fft.fft(x)
+    tau = -np.linalg.norm(r - target_position.reshape(-1)) / params.c
+    phi = 2 * np.pi * f * tau
+    # print("compute_phase_shift_near_field phi:", phi)
+    x_fft_k = x_fft * np.exp(1j * phi)
     return np.fft.ifft(x_fft_k)

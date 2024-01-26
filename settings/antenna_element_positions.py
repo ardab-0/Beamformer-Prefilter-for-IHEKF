@@ -35,6 +35,23 @@ def generate_antenna_element_positions(kind: str, lmb: float, get_A_full: bool =
         A_full = sim.get_A_full(antenna_element_positions)
 
         return antenna_element_positions, A_full
+
+    elif kind == "square_4_3":
+        d = 1
+        antenna_element_positions = np.array(
+            [[0, 0, 0 * lmb * d], [1 * lmb * d, 0, 0 * lmb * d], [2 * lmb * d, 0, 0 * lmb * d],
+             [0, 0, 1 * lmb * d], [1 * lmb * d, 0, 1 * lmb * d], [2 * lmb * d, 0, 1 * lmb * d],
+             [0, 0, 2 * lmb * d], [1 * lmb * d, 0, 2 * lmb * d], [2 * lmb * d, 0, 2 * lmb * d],
+             [0, 0, 3 * lmb * d], [1 * lmb * d, 0, 3 * lmb * d], [2 * lmb * d, 0, 3 * lmb * d],
+             # [0, 0, 4 * lmb * d], [1 * lmb * d, 0, 4 * lmb * d], [2 * lmb * d, 0, 4 * lmb * d],
+             # [0, 0, 5 * lmb * d], [1 * lmb * d, 0, 5 * lmb * d], [2 * lmb * d, 0, 5 * lmb * d],
+             # [0, 0, 6 * lmb * d], [1 * lmb * d, 0, 6 * lmb * d], [2 * lmb * d, 0, 6 * lmb * d],
+             # [0, 0, 7 * lmb * d], [1 * lmb * d, 0, 7 * lmb * d], [2 * lmb * d, 0, 7 * lmb * d],
+             ]).T
+
+        A_full = sim.get_A_full(antenna_element_positions)
+
+        return antenna_element_positions, A_full
     elif kind == "irregular_4_4":
         antenna_element_positions = np.array(
             [[0, 0, 0], [lmb / 2, 0, 0], [lmb, 0, 0], [3 * lmb / 2, 0, 0],
@@ -63,19 +80,34 @@ def generate_antenna_element_positions(kind: str, lmb: float, get_A_full: bool =
         return antenna_element_positions, A_full
 
     elif kind == "irregular_8_2":
-        d = 1
+        d = 0.8
         antenna_element_positions = np.array(
-            [[0, 0, 0*lmb * d], [lmb * d, 0, 0*lmb * d],
+            [[0, 0, 0 * lmb * d], [lmb * d, 0, 0 * lmb * d],
              [0, 0, lmb * d], [lmb * d, 0, lmb * d],
              [0, 0, 2 * lmb * d], [lmb * d, 0, 2 * lmb * d],
              [0, 0, 3 * lmb * d], [lmb * d, 0, 3 * lmb * d],
              [0, 0, 4 * lmb * d], [lmb * d, 0, 4 * lmb * d],
              [0, 0, 5 * lmb * d], [lmb * d, 0, 5 * lmb * d],
-             [0, 0, 6 * lmb * d], [lmb * d, 0, 6 * lmb * d],
-             [0, 0, 7 * lmb * d], [lmb * d, 0, 15 * lmb * d]
+             [0, 0, 9 * lmb * d], [lmb * d, 0, 9 * lmb * d],
+
+             [0, 0, 13 * lmb * d], [lmb * d, 0, 13 * lmb * d]
              ]).T
         A_full = sim.get_A_full(antenna_element_positions)
-
+        # A_full = np.array([[1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
         return antenna_element_positions, A_full
 
     elif kind == "regular_16_1":

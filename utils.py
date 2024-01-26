@@ -60,13 +60,12 @@ def generate_spiral_path(a, theta_extent, alpha):
 
     x = a * np.cos(theta) * scaling
     y = a * np.sin(theta) * scaling
-    z = a * theta * np.tan(alpha) + 2
+    z = a * theta * np.tan(alpha) + 1
     return np.array([x, y, z]).reshape((3, -1))
 
 
 def rmse(x, x_hat):
     return np.sqrt(np.mean(np.square(x - x_hat)))
-
 
 def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
