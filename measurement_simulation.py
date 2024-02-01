@@ -111,9 +111,9 @@ def compute_F(dt):
             [1, 0, 0, dt, 0, 0],
             [0, 1, 0, 0, dt, 0],
             [0, 0, 1, 0, 0, dt],
-            [0, 0, 0, dt, 0, 0],
-            [0, 0, 0, 0, dt, 0],
-            [0, 0, 0, 0, 0, dt],
+            [0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1],
         ]
     )
 
@@ -125,7 +125,7 @@ def get_A_full(antenna_pos):
     A_full = np.zeros((i_max, len(antenna_pos[0])))
 
     for i in range(i_max):
-        A_full[i, i] = 1
+        A_full[i, 0] = 1
         A_full[i, i + 1] = -1
 
     return A_full
