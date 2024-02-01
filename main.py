@@ -17,11 +17,11 @@ antenna_element_positions, A_full = generate_antenna_element_positions(kind=para
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
-beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
+beacon_pos = utils.generate_spiral_path(a=1, theta_extent=10, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[0, 0, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
-ant2 = AntennaArray(rot=[0, 0, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
-ant3 = AntennaArray(rot=[0, 0, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
+ant1 = AntennaArray(rot=[0, 30, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+ant2 = AntennaArray(rot=[0, 30, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
+ant3 = AntennaArray(rot=[0, 30, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1, ant2, ant3]
 
 # initial state
@@ -39,15 +39,16 @@ for k in range(len(beacon_pos[0])):
     G = sim.compute_G(params.dt)
     Q = params.sigma_a ** 2 * G @ G.T
     F = sim.compute_F(params.dt)
+    x_prev = x
     x = F @ x
     sigma = F @ sigma @ F.T + Q
     phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k
-    # multipath_sources = sim.generate_multipath_sources(multipath_count=params.multipath_count)
-    multipath_sources = [
-        {"x": beacon_pos[0, k],
-         "y": beacon_pos[1, k],
-         "z": -beacon_pos[2, k],
-         "a": 0.90+ np.random.randn(1)*0.1}]
+    multipath_sources = sim.generate_multipath_sources(multipath_count=params.multipath_count)
+    # multipath_sources = [
+    #     {"x": beacon_pos[0, k],
+    #      "y": beacon_pos[1, k],
+    #      "z": -beacon_pos[2, k],
+    #      "a": 0.90 + np.random.randn(1) * 0.1}]
     # iteration
     x_0 = x
     for i in params.i_list:
@@ -71,6 +72,11 @@ for k in range(len(beacon_pos[0])):
             target_dir_r, target_dir_theta, target_dir_phi = utils.cartesian_to_spherical(target_dir[0], target_dir[1],
                                                                                           target_dir[2])
 
+            real_target_dir = x[:3].reshape((-1, 1)) - antenna.get_t()
+            real_target_dir_r, real_target_dir_theta, real_target_dir_phi = utils.cartesian_to_spherical(real_target_dir[0], real_target_dir[1],
+                                                                                          real_target_dir[2])
+
+            print(f"Target direction theta: {real_target_dir_theta}, phi: {real_target_dir_phi}")
             for multipath in multipath_sources:
                 dir = np.array([multipath["x"], multipath["y"], multipath["z"]]).reshape((-1, 1)) - antenna.get_t()
                 m_r, m_t, m_p = utils.cartesian_to_spherical(dir[0], dir[1], dir[2])
@@ -129,7 +135,7 @@ for k in range(len(beacon_pos[0])):
                         beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
                         cartesian_beampattern_list.append(beampattern_cartesian)
 
-                    if params.apply_spatial_filter:
+                    if params.apply_spatial_filter and k >= params.spatial_filter_initialization_index:
                         # s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos,
                         #                            results=results, phis=phis, thetas=thetas,
                         #                            output_signals=output_signals)
@@ -151,7 +157,9 @@ for k in range(len(beacon_pos[0])):
                                                                 target_phi=target_dir_phi,
                                                                 cone_angle=np.deg2rad(
                                                                     params.cone_angle),
-                                                                num_of_removed_signals=1)
+                                                                num_of_removed_signals=1,
+                                                                # target_position=x_0[:3].reshape(-1)
+                                                                )
 
                         # s_m = spatial_filter.multipath_filter(x=s_m,
                         #                                       r=ant_pos,
@@ -315,9 +323,9 @@ for k in range(len(beacon_pos[0])):
     # update
     sigma = (np.eye(len(x)) - K @ H) @ sigma
 
-    print(beacon_pos[0:3, k])
-    print(x_0[0:3])
-    print(x[0:3])
+    print("Beacon position: \n", beacon_pos[0:3, k])
+    print("x_0: \n", x_0)
+    print("x: \n", x)
     print("\n\n")
     xs.append(x)
 
