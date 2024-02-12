@@ -517,10 +517,30 @@ def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_th
     is_peak_removed = True
     filtered_x = None
     i = 0
+
+
+
+    # remove estimated target signal first 
+    target_only_x_estimate, _ = two_step_filter(x=x,
+                                    r=r,
+                                    beamformer=beamformer,
+                                    antenna=antenna,
+                                    peak_threshold=0.1,
+                                    target_theta=target_theta,
+                                    target_phi=target_phi,
+                                    cone_angle=cone_angle,
+                                    num_of_removed_signals=1,
+                                    # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
+                                    )
+
+
+    x_without_target = x - target_only_x_estimate
+
+    
     while is_peak_removed and i < max_iteration:
         if VERBOSE:
             print(f"Iterative max 2d filter, iter: {i}, threshold: {peak_threshold}")
-        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x,
+        results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x_without_target,
                                                                                N_theta=params.N_theta,
                                                                                N_phi=params.N_phi,
                                                                                fs=params.fs,
@@ -530,7 +550,7 @@ def iterative_max_2D_filter(x, r, beamformer, antenna, peak_threshold, target_th
                                                                                       phis=phis)
         results *= element_beampattern
 
-        filtered_x, is_peak_removed = remove_max_2D(x=x,
+        filtered_x, is_peak_removed = remove_max_2D(x=x_without_target,
                                                     r=r,
                                                     results=results,
                                                     phis=phis,

@@ -115,27 +115,27 @@ for k in range(len(beacon_pos[0])):
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
     s_m_filtered = s_m
-    # s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
-    #                                                       r=ant_pos,
-    #                                                       beamformer=beamformer,
-    #                                                       antenna=antenna,
-    #                                                       peak_threshold=0.1,
-    #                                                       target_theta=target_dir_theta,
-    #                                                       target_phi=target_dir_phi,
-    #                                                       cone_angle=np.deg2rad(params.cone_angle),
-    #                                                       max_iteration=1)
+    s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
+                                                          r=ant_pos,
+                                                          beamformer=beamformer,
+                                                          antenna=antenna,
+                                                          peak_threshold=0.1,
+                                                          target_theta=target_dir_theta,
+                                                          target_phi=target_dir_phi,
+                                                          cone_angle=np.deg2rad(params.cone_angle),
+                                                          max_iteration=1)
 
-    s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
-                                                  r=ant_pos,
-                                                  beamformer=beamformer,
-                                                  antenna=antenna,
-                                                  peak_threshold=0.1,
-                                                  target_theta=target_dir_theta,
-                                                  target_phi=target_dir_phi,
-                                                  cone_angle=np.deg2rad(params.cone_angle),
-                                                  num_of_removed_signals=1,
-                                                  # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
-                                                  )
+    # s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
+    #                                               r=ant_pos,
+    #                                               beamformer=beamformer,
+    #                                               antenna=antenna,
+    #                                               peak_threshold=0.1,
+    #                                               target_theta=target_dir_theta,
+    #                                               target_phi=target_dir_phi,
+    #                                               cone_angle=np.deg2rad(params.cone_angle),
+    #                                               num_of_removed_signals=1,
+    #                                               # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
+    #                                               )
 
     # s_m_filtered = spatial_filter.multipath_filter(x=s_m,
     #                                                       r=ant_pos,
