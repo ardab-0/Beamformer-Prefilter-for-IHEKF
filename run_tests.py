@@ -22,9 +22,27 @@ def run_test(test_result_directory="test_results"):
         os.makedirs(test_result_directory)
 
     test_parameters = [
-        Parameters(sigma_a=9, i_list=(12,), antenna_kind="2_6-3-8"),
-        Parameters(sigma_a=9, i_list=(12, 14,), antenna_kind="2_6-3-8"),
-        Parameters(sigma_a=9, i_list=(12, 14, 16,), antenna_kind="2_6-3-8"),
+        
+        
+        Parameters(sigma_a=6, i_list=(12,), antenna_kind="2_6-3-8-d=1", ),
+        Parameters(sigma_a=6, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1",),
+        Parameters(sigma_a=6, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", ),
+        Parameters(sigma_a=8, i_list=(12,), antenna_kind="2_6-3-8-d=1", ),
+        Parameters(sigma_a=8, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1",),
+        Parameters(sigma_a=8, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", ),
+        Parameters(sigma_a=10, i_list=(12,), antenna_kind="2_6-3-8-d=1", ),
+        Parameters(sigma_a=10, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1",),
+        Parameters(sigma_a=10, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", ),
+
+        Parameters(sigma_a=6, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=6, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=6, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
     ]
 
     now = datetime.now()
