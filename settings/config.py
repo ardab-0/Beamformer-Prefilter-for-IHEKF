@@ -9,7 +9,7 @@ class Parameters:
     sigma_phi = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
 
     sigma = 0.01  # std of complex gaussian noise (input signal noise)
-    sigma_a = 8  # m/s**2
+    sigma_a = 10  # m/s**2
     dt = 0.01  # s
     N_theta = 200
     N_phi = 200
@@ -20,7 +20,7 @@ class Parameters:
     use_multipath = True  # True or False
     multipath_count = 4
 
-    antenna_kind = "irregular_8_2"  # "original" or "square_4_4" or "irregular_4_4"
+    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [12, 14, 16]  # antenna number to include at each iteration
 
     visualize_beampatterns = True
@@ -42,4 +42,4 @@ class Parameters:
     spatial_filter_initialization_index = 0
 
 
-VERBOSE = False
+VERBOSE = True
