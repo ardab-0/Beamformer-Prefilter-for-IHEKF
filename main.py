@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.linalg
 from tqdm import tqdm
-
 import spatial_filter
 import utils
 from antenna_array import AntennaArray
@@ -42,7 +41,6 @@ def simulate(params):
         G = sim.compute_G(params.dt)
         Q = params.sigma_a ** 2 * G @ G.T
         F = sim.compute_F(params.dt)
-        x_prev = x
         x = F @ x
         sigma = F @ sigma @ F.T + Q
         phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k

@@ -22,8 +22,9 @@ def run_test(test_result_directory="test_results"):
         os.makedirs(test_result_directory)
 
     test_parameters = [
-        Parameters(use_multipath=False, i_list=(12, 14)),
-        Parameters(use_multipath=True),
+        Parameters(sigma_a=9, i_list=(12,), antenna_kind="2_6-3-8"),
+        Parameters(sigma_a=9, i_list=(12, 14,), antenna_kind="2_6-3-8"),
+        Parameters(sigma_a=9, i_list=(12, 14, 16,), antenna_kind="2_6-3-8"),
     ]
 
     now = datetime.now()

@@ -23,7 +23,7 @@ class Parameters:
     antenna_kind = "irregular_8_2"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [12, 14, 16]  # antenna number to include at each iteration
 
-    visualize_beampatterns = False
+    visualize_beampatterns = True
     measure_phi_m_directly = False
     apply_spatial_filter = True
 
