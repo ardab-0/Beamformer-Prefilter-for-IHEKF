@@ -127,3 +127,15 @@ def cone_filter(cartesian_points, target_theta, target_phi, cone_angle):
     projection = dir @ cartesian_points_normalized
     kept_idx = projection > np.cos(cone_angle)
     return kept_idx
+
+
+def phase_error(x, x_hat):
+    """
+
+    :param x: N x Antenna element count
+    :param x_hat: N x Antenna element count
+    :return:
+    """
+
+    a = np.linalg.norm(x - x_hat, axis=0) / len(x)
+    return np.mean(a)
