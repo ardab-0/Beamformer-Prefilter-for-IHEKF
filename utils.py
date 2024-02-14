@@ -136,6 +136,5 @@ def phase_error(x, x_hat):
     :param x_hat: N x Antenna element count
     :return:
     """
-
     a = np.linalg.norm(x - x_hat, axis=0) / len(x)
     return np.mean(a)

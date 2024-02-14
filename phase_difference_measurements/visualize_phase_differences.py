@@ -19,8 +19,12 @@ for i in range(length):
     plt.ylabel("phase difference (rad)")
     plt.legend()
 
-no_filter_error = utils.rmse(phi_differences, phi_no_multipath_differences)
-filter_error = utils.rmse(phi_filtered_differences, phi_no_multipath_differences)
+
+
+
+
+no_filter_error = utils.phase_error(phi_differences, phi_no_multipath_differences)
+filter_error = utils.phase_error(phi_filtered_differences, phi_no_multipath_differences)
 
 print(f"No Filter RMSE: {no_filter_error}, Filter RMSE: {filter_error}")
 plt.show()
