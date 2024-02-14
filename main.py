@@ -15,6 +15,8 @@ from settings.config import VERBOSE
 
 
 def simulate(params):
+    spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
+
     antenna_element_positions, A_full = generate_antenna_element_positions(kind=params.antenna_kind, lmb=params.lmb,
                                                                            get_A_full=True)
     antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
@@ -142,19 +144,20 @@ def simulate(params):
                             cartesian_beampattern_list.append(beampattern_cartesian)
 
                         if params.apply_spatial_filter and k >= params.spatial_filter_initialization_index:
-                            # s_m = spatial_filter.remove_components_2D(x=s_m, r=ant_pos,
+                            # s_m = spatial_filter_collection.remove_components_2D(x=s_m, r=ant_pos,
                             #                            results=results, phis=phis, thetas=thetas,
                             #                            output_signals=output_signals)
-                            # s_m = spatial_filter.iterative_max_2D_filter(x=s_m,
-                            #                              r=ant_pos,
-                            #                              beamformer=beamformer,
-                            #                              antenna=antenna,
-                            #                              target_theta=target_dir_theta,
-                            #                              target_phi=target_dir_phi,
-                            #                              cone_angle=np.deg2rad(params.cone_angle),
-                            #                              peak_threshold=0.1,
-                            #                              max_iteration=1)
-                            s_m, _ = spatial_filter.two_step_filter(x=s_m,
+                            # s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
+                            #                                                       r=ant_pos,
+                            #                                                       beamformer=beamformer,
+                            #                                                       antenna=antenna,
+                            #                                                       peak_threshold=0.1,
+                            #                                                       target_theta=target_dir_theta,
+                            #                                                       target_phi=target_dir_phi,
+                            #                                                       cone_angle=np.deg2rad(
+                            #                                                           params.cone_angle),
+                            #                                                       max_iteration=params.multipath_count) # needs to be adaptive
+                            s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
                                                                     r=ant_pos,
                                                                     beamformer=beamformer,
                                                                     antenna=antenna,
@@ -169,7 +172,7 @@ def simulate(params):
                                                                     # target_position=x_0[:3].reshape(-1)
                                                                     )
 
-                            # s_m = spatial_filter.multipath_filter(x=s_m,
+                            # s_m = spatial_filter_collection.multipath_filter(x=s_m,
                             #                                       r=ant_pos,
                             #                                       beamformer=beamformer,
                             #                                       antenna=antenna,
@@ -180,7 +183,7 @@ def simulate(params):
                             #                                           params.target_theta_range_deg),
                             #                                       d_phi=np.deg2rad(params.target_phi_range_deg))
 
-                            # s_m = spatial_filter.ground_reflection_filter(x=s_m,
+                            # s_m = spatial_filter_collection.ground_reflection_filter(x=s_m,
                             #                                               r=ant_pos,
                             #                                               beamformer=beamformer,
                             #                                               antenna=antenna,

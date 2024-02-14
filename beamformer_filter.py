@@ -15,7 +15,7 @@ visualize = False
 ################### params
 np.random.seed(10)
 
-antenna_element_positions, A_full = generate_antenna_element_positions(kind="regular_8_2", lmb=params.lmb,
+antenna_element_positions, A_full = generate_antenna_element_positions(kind="2_6-3-8-d=1", lmb=params.lmb,
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
@@ -28,7 +28,7 @@ fs = 100 * params.f
 t = np.arange(params.N) / fs
 
 beamformer = generate_beamformer(beamformer_type="delay_and_sum")
-
+spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
 recorded_phi_differences = []
 recorded_phi_no_multipath_differences = []
 recorded_phi_filtered_differences = []
@@ -57,7 +57,7 @@ for k in range(len(beacon_pos[0])):
 
     s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos,
                                     beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
-                                    phi_B=phi_B, sigma=0.05, multipath_sources=multipath_sources)
+                                    phi_B=phi_B, sigma=params.sigma, multipath_sources=multipath_sources)
 
     s_m_no_multipath = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos,
                                                  beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
@@ -115,7 +115,7 @@ for k in range(len(beacon_pos[0])):
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
     s_m_filtered = s_m
-    s_m_filtered = spatial_filter.iterative_max_2D_filter(x=s_m,
+    s_m_filtered = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
                                                           r=ant_pos,
                                                           beamformer=beamformer,
                                                           antenna=antenna,
@@ -123,9 +123,9 @@ for k in range(len(beacon_pos[0])):
                                                           target_theta=target_dir_theta,
                                                           target_phi=target_dir_phi,
                                                           cone_angle=np.deg2rad(params.cone_angle),
-                                                          max_iteration=1)
+                                                          max_iteration=3)
 
-    # s_m_filtered, _ = spatial_filter.two_step_filter(x=s_m,
+    # s_m_filtered, _ = spatial_filter_collection.two_step_filter(x=s_m,
     #                                               r=ant_pos,
     #                                               beamformer=beamformer,
     #                                               antenna=antenna,
@@ -137,7 +137,7 @@ for k in range(len(beacon_pos[0])):
     #                                               # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
     #                                               )
 
-    # s_m_filtered = spatial_filter.multipath_filter(x=s_m,
+    # s_m_filtered = spatial_filter_collection.multipath_filter(x=s_m,
     #                                                       r=ant_pos,
     #                                                       beamformer=beamformer,
     #                                                       antenna=antenna,
@@ -147,7 +147,7 @@ for k in range(len(beacon_pos[0])):
     #                                                       cone_angle=np.deg2rad(params.cone_angle),
     #                                                       )
 
-    # s_m_filtered = spatial_filter.ground_reflection_filter(x=s_m,
+    # s_m_filtered = spatial_filter_collection.ground_reflection_filter(x=s_m,
     #                                                        r=ant_pos,
     #                                                        beamformer=beamformer,
     #                                                        antenna=antenna,

@@ -9,6 +9,9 @@ from beamformer.beamformer import generate_beamformer
 import measurement_simulation as sim
 import spatial_filter
 
+
+spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
+
 antenna_element_positions, A_full = generate_antenna_element_positions(kind="square_4_4", lmb=params.lmb,
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
@@ -89,7 +92,7 @@ for k in range(len(beacon_pos[0])):
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        # s_m_filtered = spatial_filter.remove_max_2D(x=s_m,
+        # s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m,
         #                                             r=ant_pos_m_i,
         #                                             results=results,
         #                                             phis=phis,
@@ -100,7 +103,7 @@ for k in range(len(beacon_pos[0])):
         #                                             d_theta=np.deg2rad(5),
         #                                             d_phi=np.deg2rad(5))
 
-        s_m_filtered = spatial_filter.remove_max_2D(x=s_m,
+        s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m,
                                                     r=ant_pos_m_i,
                                                     results=results,
                                                     phis=phis,
@@ -196,7 +199,7 @@ for k in range(len(beacon_pos[0])):
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        # s_m_filtered = spatial_filter.remove_max_2D(x=s_m,
+        # s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m,
         #                                             r=ant_pos_m_i,
         #                                             results=results,
         #                                             phis=phis,
@@ -207,7 +210,7 @@ for k in range(len(beacon_pos[0])):
         #                                             d_theta=np.deg2rad(5),
         #                                             d_phi=np.deg2rad(5))
 
-        s_m_filtered = spatial_filter.remove_max_2D(x=s_m_filtered,
+        s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m_filtered,
                                                     r=ant_pos_m_i,
                                                     results=results,
                                                     phis=phis,
@@ -302,7 +305,7 @@ for k in range(len(beacon_pos[0])):
         # Add a color bar which maps values to colors.
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        # s_m_filtered = spatial_filter.remove_max_2D(x=s_m,
+        # s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m,
         #                                             r=ant_pos_m_i,
         #                                             results=results,
         #                                             phis=phis,
@@ -313,7 +316,7 @@ for k in range(len(beacon_pos[0])):
         #                                             d_theta=np.deg2rad(5),
         #                                             d_phi=np.deg2rad(5))
 
-        s_m_filtered = spatial_filter.remove_max_2D(x=s_m_filtered,
+        s_m_filtered = spatial_filter_collection.remove_max_2D(x=s_m_filtered,
                                                     r=ant_pos_m_i,
                                                     results=results,
                                                     phis=phis,
