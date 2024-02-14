@@ -8,12 +8,12 @@ class Parameters:
     room_z = [0, 3]  # m
     sigma_phi = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
 
-    sigma = 0.01  # std of complex gaussian noise (input signal noise)
+    sigma = 0.0  # std of complex gaussian noise (input signal noise)
     sigma_a = 10  # m/s**2
     dt = 0.01  # s
     N_theta = 200
     N_phi = 200
-    N = 100
+    N = 200
     jacobian_type = "numpy"  # "numpy" or "scipy"
     apply_element_pattern = True
 

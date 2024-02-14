@@ -12,7 +12,7 @@ class Parameters:
     room_z: tuple = (-5, 5)  # m
     sigma_phi: float = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
     sigma: float = 0.01  # std of complex gaussian noise (input signal noise)
-    sigma_a: float = 8  # m/s**2
+    sigma_a: float = 10  # m/s**2
     dt: float = 0.01  # s
     N_theta: int = 200
     N_phi: int = 200
