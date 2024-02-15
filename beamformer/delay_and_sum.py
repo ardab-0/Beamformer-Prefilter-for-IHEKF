@@ -43,6 +43,8 @@ class DelayAndSumBeamformer:
             return self.__compute_beampatern_gpu(x, thetas, phis, fs, r)
         elif self.type == "cpu":
             return self.__compute_beampatern_cpu(x, thetas, phis, fs, r)
+        elif self.type == "cpu_np_fft":
+            return self.__compute_beampatern_cpu_np_fft(x, thetas, phis, fs, r)
         else:
             raise TypeError("Wrong compute type.")
 
@@ -95,6 +97,32 @@ class DelayAndSumBeamformer:
         # results = np.sqrt(results)  # power to amplitude conversion
         return results.T, output_signals, thetas, phis
 
+
+    def __compute_beampatern_cpu_np_fft(self, x, thetas, phis, fs, r):
+        N_array, N = x.shape
+
+        x_fft = np.fft.fft(x, axis=1)
+
+
+        # results = np.zeros((N_theta, N_phi))
+        #
+        # output_signals = np.zeros((N_theta, N_phi, N), dtype=np.complex64)
+        theta_sweep, phi_sweep = np.meshgrid(thetas, phis)
+        u_sweep = np.array(
+            [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
+             np.cos(theta_sweep)])
+
+        v = np.tensordot(r.T, u_sweep, axes=1)
+
+        H = np.exp(-1j * 2 * np.pi * params.f * v / params.c)
+        out = np.tensordot(x_fft.T, H, axes=1)
+        out /= N_array
+        out = np.fft.ifft(out, axis=0)
+        output_signals = np.transpose(out, (1, 2, 0))
+        results = np.mean(np.abs(out) ** 2, axis=0)
+        # results /= np.max(results)
+        # results = np.sqrt(results)  # power to amplitude conversion
+        return results, output_signals, thetas, phis
 
     def spherical_to_cartesian(self, results, thetas, phis):
         """

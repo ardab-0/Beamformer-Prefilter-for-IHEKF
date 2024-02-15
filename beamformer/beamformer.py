@@ -6,7 +6,7 @@ from beamformer.music import MusicBeamformer
 default_configuration = {"fourier": {"compute_method": "gpu"},
                              "capon": {"compute_method": "cpu"},
                              "music": {"compute_method": "cpu"},
-                         "delay_and_sum": {"compute_method": "cpu"}}
+                         "delay_and_sum": {"compute_method": "cpu_np"}}
 def generate_beamformer(beamformer_type: str, config: dict = None):
     if config is None:
         compute_method = default_configuration[beamformer_type]["compute_method"]
