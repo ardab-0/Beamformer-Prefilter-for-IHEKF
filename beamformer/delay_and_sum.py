@@ -75,16 +75,13 @@ class DelayAndSumBeamformer:
         output_signals = np.zeros((len(thetas), len(phis), N), dtype=np.complex64)
         results = np.zeros((len(thetas), len(phis)))
         x = np.asmatrix(x)
-        # Calc covariance matrix
-        R = x @ x.H  # gives a Nr x Nr covariance matrix of the samples
 
-        Rinv = np.linalg.pinv(R)  # pseudo-inverse tends to work better than a true inverse
         for k, theta_i in enumerate(thetas):
             for l, phi in enumerate(phis):
                 u_sweep = np.array([np.sin(theta_i) * np.cos(phi), np.sin(theta_i) * np.sin(phi), np.cos(theta_i)]).reshape(
                     (-1, 1))
                 a = r.T @ u_sweep
-                a = np.exp(-1j * 2 * np.pi * params.f * a / params.c)
+                a = np.exp(1j * 2 * np.pi * params.f * a / params.c)
                 a = np.asmatrix(a)
 
                 out = a.H @ x / N_array
