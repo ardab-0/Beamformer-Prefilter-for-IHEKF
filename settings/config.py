@@ -8,7 +8,7 @@ class Parameters:
     room_z = [0, 3]  # m
     sigma_phi = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
 
-    sigma = 0.0  # std of complex gaussian noise (input signal noise)
+    sigma = 0.01  # std of complex gaussian noise (input signal noise)
     sigma_a = 10  # m/s**2
     dt = 0.01  # s
     N_theta = 200
@@ -18,7 +18,7 @@ class Parameters:
     apply_element_pattern = True
 
     use_multipath = True  # True or False
-    multipath_count = 2
+    multipath_count = 4
 
     antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [12, 14, 16]  # antenna number to include at each iteration

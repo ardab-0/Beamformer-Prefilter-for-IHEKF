@@ -382,5 +382,5 @@ def main(params):
 
 
 if __name__ == "__main__":
-    np.random.seed(1)
+    np.random.seed(10)
     main(params=Parameters)
