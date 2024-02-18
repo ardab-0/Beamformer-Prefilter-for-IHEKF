@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="kalman" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="thesis" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="kalman" project-jdk-type="Python SDK" />
 </project>

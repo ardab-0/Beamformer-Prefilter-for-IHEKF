@@ -33,8 +33,7 @@ def simulate(params):
     x = np.array([[beacon_pos[0, 0], beacon_pos[1, 0], beacon_pos[2, 0], 0, 0, 0]]).T
     sigma = np.eye(len(x))  # try individual values
     jacobian_cache = {}
-    fs = 100 * params.f
-    t = np.arange(params.N) / fs
+    t = np.arange(params.N) / params.fs
     beamformer = generate_beamformer(beamformer_type=params.beamformer_type)
     recorded_phi_differences = []
 
@@ -107,7 +106,7 @@ def simulate(params):
                                 x=s_m[:antennas_used_in_beamformer],
                                 N_theta=params.N_theta,
                                 N_phi=params.N_phi,
-                                fs=fs,
+                                fs=params.fs,
                                 r=ant_pos[:, :antennas_used_in_beamformer])
 
                         if params.apply_element_pattern:
@@ -199,7 +198,7 @@ def simulate(params):
                                     x=s_m[:antennas_used_in_beamformer],
                                     N_theta=params.N_theta,
                                     N_phi=params.N_phi,
-                                    fs=fs,
+                                    fs=params.fs,
                                     r=ant_pos[:, :antennas_used_in_beamformer])
                                 # results = np.sqrt(results) # power to amplitude conversion
                                 beampattern_2d_list[-1].update({"results_filtered": results,
@@ -226,7 +225,7 @@ def simulate(params):
                             x=s_m[:antennas_used_in_beamformer],
                             N_theta=params.N_theta,
                             N_phi=params.N_phi,
-                            fs=fs,
+                            fs=params.fs,
                             r=ant_pos[:, :antennas_used_in_beamformer])
                         # results = np.sqrt(results) # power to amplitude conversion
                         beampattern_2d_list.append({"results": results,
