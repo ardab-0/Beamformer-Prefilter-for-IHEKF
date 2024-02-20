@@ -86,9 +86,10 @@ def simulate(params):
     xs = []
     initial_beacon_pos = dataloader.get_initial_beacon_pos()
     x = np.array([[initial_beacon_pos[0], initial_beacon_pos[1], initial_beacon_pos[2], 0, 0, 0]]).T
-    sigma = np.eye(len(x))  # try individual values
+    sigma = np.eye(len(x)) * 0.1 # try individual values
     beamformer = generate_beamformer(beamformer_type=params.beamformer_type)
     recorded_phi_differences = []
+    baseleine_phi_differences = []
 
     t_list, trajectory_list, raw_data_list = dataloader.get_data()
     for k, (t, beacon_pos, raw_data_snip) in tqdm(enumerate(zip(t_list, trajectory_list, raw_data_list))):
@@ -105,6 +106,7 @@ def simulate(params):
             R = []
             h = []
             phi = []
+            phi_ref = []
 
             # to visualize beam pattern at each step
             cartesian_beampattern_list = []
@@ -130,11 +132,6 @@ def simulate(params):
 
                 # antennas_used_in_beamformer = params.i_list[0]
                 antennas_used_in_beamformer = i
-
-                # s_m = sim.measure_s_m_multipath(t=t, antenna_positions=ant_pos,
-                #                                 beacon_pos=beacon_pos.reshape((-1, 1)),
-                #                                 phi_B=phi_B, sigma=params.sigma,
-                #                                 multipath_sources=[])
 
                 s_m = raw_data_snip[antenna_idx].T
 
@@ -228,10 +225,12 @@ def simulate(params):
                                                         "s_m_filtered": s_m,
                                                         "output_signals_filtered": output_signals})
 
-                # phi_m = sim.measure_phi(s_m=s_m, f_m=params.f, t=t)
-                phi_m = sim.measure_phi_real_data(s_m, phase_offset=dataloader.get_phase_offset()[antenna_idx].reshape((-1, 1)))
+                phi_m = sim.measure_phi(s_m, phase_offset=dataloader.get_phase_offset()[antenna_idx].reshape((-1, 1)))
 
                 phi.append(phi_m[: i])
+
+                phi_m_ref = sim.measure(ant_pos_m_i, beacon_pos.reshape((-1, 1)), sigma_phi=0)
+                phi_ref.append(phi_m_ref[: i])
 
                 A_m = A_full[: i - 1, : i]
                 A.append(A_m.tolist())
@@ -255,8 +254,8 @@ def simulate(params):
                 ax.set_zlabel("z(m)")
                 for beampattern in cartesian_beampattern_list:
                     ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
-                ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
-                ax.scatter3D(beacon_pos[0], beacon_pos[1], beacon_pos[2], c="red")
+                ax.plot3D(beacon_pos[0], beacon_pos[1], beacon_pos[2], "green")
+                # ax.scatter3D(trajectory[0, :], beacon_pos[1], beacon_pos[2], c="red")
 
                 fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
                 for i, beampattern_2d in enumerate(beampattern_2d_list):
@@ -294,6 +293,7 @@ def simulate(params):
 
             ant_pos_i = np.hstack(ant_pos_i)
             phi = np.vstack(phi)
+            phi_ref = np.vstack(phi_ref)
             A = scipy.linalg.block_diag(*A)
             R = scipy.linalg.block_diag(*R)
             h = np.vstack(h)
@@ -301,6 +301,7 @@ def simulate(params):
             z = A @ phi
             h = utils.mod_2pi(A @ h)
             recorded_phi_differences.append(utils.mod_2pi(A @ phi))
+            baseleine_phi_differences.append(utils.mod_2pi(A @ phi_ref))
 
             H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=params.c,
                                w0=2 * np.pi * params.f)
@@ -318,11 +319,11 @@ def simulate(params):
         xs.append(x)
 
     xs = np.array(xs).squeeze()
-    return xs, trajectory_list, antenna_list, recorded_phi_differences
+    return xs, trajectory_list, antenna_list, recorded_phi_differences, baseleine_phi_differences
 
 
 def main(params):
-    xs, trajectory_list, antenna_list, recorded_phi_differences = simulate(params)
+    xs, trajectory_list, antenna_list, recorded_phi_differences, baseleine_phi_differences = simulate(params)
     # creating an empty canvas
     fig = plt.figure()
 
@@ -347,10 +348,15 @@ def main(params):
 
     print("RMSE: ", utils.rmse(xs[:, :3].T, trajectory))
 
-    recorded_phi_differences = np.asarray(recorded_phi_differences)
-    recorded_phi_differences = recorded_phi_differences.squeeze()
-    filename = "multipath" if params.use_multipath else "los"
-    np.save(filename, recorded_phi_differences)
+    # recorded_phi_differences = np.asarray(recorded_phi_differences)
+    # recorded_phi_differences = recorded_phi_differences.squeeze()
+    # filename = "multipath"
+    # np.save(filename, recorded_phi_differences)
+    #
+    # baseleine_phi_differences = np.asarray(baseleine_phi_differences)
+    # baseleine_phi_differences = baseleine_phi_differences.squeeze()
+    # filename = "los"
+    # np.save(filename, baseleine_phi_differences)
 
     plt.show()
 
