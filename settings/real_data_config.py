@@ -12,10 +12,10 @@ class Parameters:
     dt = 0.01  # s
     N_theta = 100
     N_phi = 100
-    apply_element_pattern = False
+    apply_element_pattern = True
 
 
-    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
+    antenna_kind = "square_4_3"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [5, 8, 12]  # antenna number to include at each iteration
 
     visualize_beampatterns = True
