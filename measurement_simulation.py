@@ -90,6 +90,17 @@ def measure_phi(s_m, f_m, t):  # might need to modify mean
     return phi
 
 
+def measure_phi_real_data(s_m, phase_offset):
+    phases_meas = np.empty(shape=(s_m.shape[0], 1))
+    phases_meas[0] = 0
+    for ant_nr in range(1, s_m.shape[0]):
+        snip1 = s_m[0, :] - np.mean(s_m[0, :])  # dc correcion
+        snip2 = s_m[ant_nr, :] - np.mean(s_m[ant_nr, :])  # dc correcion
+        phases_meas[ant_nr] = np.angle(np.correlate(snip1, snip2))[0]
+
+    phases_meas_korr = np.mod(phases_meas + phase_offset + np.pi, 2 * np.pi) - np.pi
+    return phases_meas_korr
+
 def compute_G(dt):
     G = np.array(
         [

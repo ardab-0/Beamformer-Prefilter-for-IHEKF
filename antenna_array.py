@@ -45,6 +45,19 @@ class AntennaArray:
         return self.antenna_element.get_element_pattern(thetas, phis)
 
 
+class RealDataAntennaArray:
+    def __init__(self):
+        self.antenna_positions = None
+
+    def load_antenna_positions(self, antenna_pos):
+        self.antenna_positions = antenna_pos
+
+    def get_antenna_positions(self):
+        return self.antenna_positions
+
+    def get_t(self):
+        return np.mean(self.antenna_positions, axis=1).reshape((3, 1))
+
 class AntennaElement:
     def __init__(self, mu_theta=0, mu_phi=0, sigma_theta=0.3, sigma_phi=0.3):
         self.mu_theta = mu_theta
