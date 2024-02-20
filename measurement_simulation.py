@@ -29,8 +29,8 @@ def measure_multipath(antenna_positions, beacon_pos, sigma_phi, multipath_count)
 
 def measure(antenna_positions, beacon_pos, sigma_phi):
     # random phase offset for receiver
-    phi_mix = np.random.rand() * 2 * np.pi
-    # phi_mix = 0
+    # phi_mix = np.random.rand() * 2 * np.pi
+    phi_mix = 0
     tau = np.linalg.norm(antenna_positions - beacon_pos, axis=0) / params.c
 
     n = np.random.randn(*tau.shape) * sigma_phi
@@ -81,24 +81,23 @@ def generate_multipath_sources(multipath_count):
     return sources
 
 
-def measure_phi(s_m, f_m, t):  # might need to modify mean
-    phi_lo = np.random.rand() * 2 * np.pi
-    s_lo = np.exp(-1j * (2 * np.pi * f_m * t + phi_lo))
-    s_mix = s_m * s_lo
-    phi = np.mean(np.angle(s_mix), axis=1).reshape((-1, 1))
-    phi = utils.mod_2pi(phi)
-    return phi
+# def measure_phi(s_m, f_m, t):  # might need to modify mean
+#     phi_lo = np.random.rand() * 2 * np.pi
+#     s_lo = np.exp(-1j * (2 * np.pi * f_m * t + phi_lo))
+#     s_mix = s_m * s_lo
+#     phi = np.mean(np.angle(s_mix), axis=1).reshape((-1, 1))
+#     phi = utils.mod_2pi(phi)
+#     return phi
 
 
-def measure_phi_real_data(s_m, phase_offset):
+def measure_phi(s_m, phase_offset=0):
     phases_meas = np.empty(shape=(s_m.shape[0], 1))
     phases_meas[0] = 0
     for ant_nr in range(1, s_m.shape[0]):
         snip1 = s_m[0, :] - np.mean(s_m[0, :])  # dc correcion
         snip2 = s_m[ant_nr, :] - np.mean(s_m[ant_nr, :])  # dc correcion
         phases_meas[ant_nr] = np.angle(np.correlate(snip1, snip2))[0]
-
-    phases_meas_korr = np.mod(phases_meas + phase_offset + np.pi, 2 * np.pi) - np.pi
+    phases_meas_korr = utils.mod_2pi(-(phases_meas + phase_offset)) #################################### there should be a negative sign
     return phases_meas_korr
 
 def compute_G(dt):
