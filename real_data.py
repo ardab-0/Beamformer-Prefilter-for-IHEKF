@@ -3,7 +3,7 @@ import scipy.linalg
 from tqdm import tqdm
 import spatial_filter
 import utils
-from antenna_array import AntennaArray, RealDataAntennaArray
+from antenna_array import SimulationAntennaArray, RealDataAntennaArray
 from beamformer.beamformer import generate_beamformer
 from settings.antenna_element_positions import generate_antenna_element_positions
 from jacobian import Jacobian_h, jacobian_numpy
@@ -78,8 +78,7 @@ def simulate(params):
     antenna_pos_list = dataloader.get_antenna_position_list()
     antenna_list = []
     for antenna_pos in antenna_pos_list:
-        antenna = RealDataAntennaArray()
-        antenna.load_antenna_positions(antenna_pos=antenna_pos.T)
+        antenna = RealDataAntennaArray(params=params, antenna_element_pos=antenna_pos.T)
         antenna_list.append(antenna)
 
     # initial state

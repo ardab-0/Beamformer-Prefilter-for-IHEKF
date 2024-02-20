@@ -3,7 +3,7 @@ import scipy.linalg
 from tqdm import tqdm
 import spatial_filter
 import utils
-from antenna_array import AntennaArray
+from antenna_array import SimulationAntennaArray
 from beamformer.beamformer import generate_beamformer
 from settings.antenna_element_positions import generate_antenna_element_positions
 from jacobian import Jacobian_h, jacobian_numpy
@@ -23,9 +23,9 @@ def simulate(params):
 
     beacon_pos = utils.generate_spiral_path(a=1, theta_extent=5, alpha=np.pi / 45)
 
-    ant1 = AntennaArray(rot=[0, 0, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
-    ant2 = AntennaArray(rot=[0, 0, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
-    ant3 = AntennaArray(rot=[0, 0, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
+    ant1 = SimulationAntennaArray(rot=[0, 0, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+    ant2 = SimulationAntennaArray(rot=[0, 0, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
+    ant3 = SimulationAntennaArray(rot=[0, 0, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
     antenna_list = [ant1, ant2, ant3]
 
     # initial state

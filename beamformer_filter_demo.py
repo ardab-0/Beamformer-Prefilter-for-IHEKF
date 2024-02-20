@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 from matplotlib import cm
-from antenna_array import AntennaArray
+from antenna_array import SimulationAntennaArray
 from settings.antenna_element_positions import generate_antenna_element_positions
 from settings.config import Parameters as params
 import utils
@@ -18,7 +18,7 @@ antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # s
 
 beacon_pos = utils.generate_spiral_path(a=1, theta_extent=20, alpha=np.pi / 45)
 
-ant1 = AntennaArray(rot=[0, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+ant1 = SimulationAntennaArray(rot=[0, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
 antenna_list = [ant1]
 
 fs = 100 * params.f
