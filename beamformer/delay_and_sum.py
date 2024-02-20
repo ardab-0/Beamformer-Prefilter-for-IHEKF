@@ -63,8 +63,9 @@ class DelayAndSumBeamformer:
         out /= N_array
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
-        # results /= np.max(results)
+
         results = np.sqrt(results)  # power to amplitude conversion
+        results /= np.max(results)
         return results, output_signals, thetas, phis
     def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
         raise NotImplementedError
@@ -120,7 +121,7 @@ class DelayAndSumBeamformer:
         out = np.fft.ifft(out, axis=0)
         output_signals = np.transpose(out, (1, 2, 0))
         results = np.mean(np.abs(out) ** 2, axis=0)
-        # results /= np.max(results)
+        results /= np.max(results)
         # results = np.sqrt(results)  # power to amplitude conversion
         return results, output_signals, thetas, phis
 
