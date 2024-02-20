@@ -138,3 +138,39 @@ def phase_error(x, x_hat):
     """
     a = np.linalg.norm(x - x_hat, axis=0) / len(x)
     return np.mean(a)
+
+
+def optimal_rotation_and_translation(A, B):
+    """
+        A: points (3xN)
+        B: points (3xN)
+        R: (3x3)
+        t = (3x1)
+        source: https://simonensemble.github.io/posts/2018-10-27-orthogonal-procrustes/
+                https://nghiaho.com/?page_id=671
+                https://en.wikipedia.org/wiki/Kabsch_algorithm
+    """
+
+    centroidA = np.mean(A, axis=1).reshape((-1, 1))
+    centroidB = np.mean(B, axis=1).reshape((-1, 1))
+    # print(centroidA)
+    # print(centroidB)
+    H = (A - centroidA) @ (B - centroidB).T
+
+    U, S, Vh = np.linalg.svd(H)
+
+    V = Vh.T
+    # print(U.shape)
+    # print(S.shape)
+    # print(V.shape)
+
+    R = V @ U.T
+
+    if np.linalg.det(R) < 0:
+        print("negative det")
+        V[:, 2] *= -1
+        R = V @ U.T
+
+    t = centroidB - R @ centroidA
+
+    return R, t
