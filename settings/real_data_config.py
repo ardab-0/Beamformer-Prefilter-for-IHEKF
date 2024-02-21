@@ -6,19 +6,21 @@ class Parameters:
     room_x = [-5, 5]  # m
     room_y = [-5, 5]  # m
     room_z = [0, 3]  # m
-    sigma_phi = 0.17  #
-    sigma = 0.01  # std of complex gaussian noise (input signal noise)
-    sigma_a = 1  # m/s**2
+    sigma_phi = 0.16  #
+    sigma_a = 1 # m/s**2
+    sigma_x0 = 0.01 # initial position uncertaintyy
+    sigma_v0 = 0.05 # initial velocity uncertainty
+
     dt = 0.01  # s
     N_theta = 100
     N_phi = 100
     apply_element_pattern = False
 
 
-    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [5, 8, 12]  # antenna number to include at each iteration
+    antenna_kind = "x_12"  # "original" or "square_4_4" or "irregular_4_4"
+    i_list = [ 5, 8 ]  # antenna number to include at each iteration
 
-    visualize_beampatterns = True
+    visualize_beampatterns = False
     measure_phi_m_directly = False
     apply_spatial_filter = False
 
@@ -31,7 +33,6 @@ class Parameters:
     target_phi_range_deg = 2
     target_theta_range_deg = 4
     cone_angle = 10
-    spatial_filter_initialization_index = 0
 
 
-VERBOSE = False
+VERBOSE = True

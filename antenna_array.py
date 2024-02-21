@@ -72,14 +72,31 @@ class RealDataAntennaArray(AntennaArray):
         self.antenna_element = AntennaElement(mu_theta=theta, mu_phi=phi, sigma_phi=1, sigma_theta=1)
 
     def _compute_R_t(self):
-        return utils.optimal_rotation_and_translation(self.model_antenna_element_positions,
+
+
+        R, t = utils.optimal_rotation_and_translation(self.model_antenna_element_positions,
                                                       self.antenna_element_positions)
+
+        # fig = plt.figure()
+        # ax = plt.axes(projection="3d")
+        #
+        # # ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], 'red')
+        # ax.scatter3D(self.model_antenna_element_positions[0, :], self.model_antenna_element_positions[1, :],
+        #              self.model_antenna_element_positions[2, :], c='magenta')
+        # ax.scatter3D(self.antenna_element_positions[0, :], self.antenna_element_positions[1, :],
+        #              self.antenna_element_positions[2, :], c='blue')
+        # transformed = R @ self.model_antenna_element_positions  + t
+        # ax.scatter3D(transformed[0, :], transformed[1, :], transformed[2, :], c='red')
+        # plt.show()
+
+
+        return R, t
 
     def get_antenna_positions(self):
         return self.antenna_element_positions
 
     def _compute_theta_phi(self):
-        initial_direction = np.array([[1, 0, 0]]).T
+        initial_direction = np.array([[0, -1, 0]]).T
 
         new_direction = self._R @ initial_direction
         r, theta, phi = cartesian_to_spherical(new_direction[0], new_direction[1], new_direction[2])

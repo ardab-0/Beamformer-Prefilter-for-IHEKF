@@ -15,7 +15,8 @@ from settings.config import VERBOSE
 
 
 class DataLoader:
-    def __init__(self, folder):
+    def __init__(self, folder, params):
+        self.params = params
         ant_pos_id10 = np.load(f"{folder}/Antennas_Pos_est_id10.npy").T
         ant_pos_id11 = np.load(f"{folder}/Antennas_Pos_est_id11.npy").T
         ant_pos_id12 = np.load(f"{folder}/Antennas_Pos_est_id12.npy").T
@@ -52,19 +53,7 @@ class DataLoader:
         return self.ant_pos_list
 
     def get_A_full(self):
-        A_full = np.array([[-1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 1-2 # neue spanning tree
-                           [-1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # 1-3
-                           [-1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],  # 1-4
-                           [-1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],  # 1-5
-                           [0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0],  # 4-6
-                           [0, 0, -1, 0, 0, 0, 1, 0, 0, 0, 0, 0],  # 3-7
-                           [0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0],  # 5-8
-                           [0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0],  # 6-9
-                           [0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0],  # 8-10
-                           [0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 1, 0],  # 6-11
-                           [0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1],  # 7-12
-                           ])
-
+        _, A_full = generate_antenna_element_positions(kind=self.params.antenna_kind, lmb=self.params.lmb, get_A_full=True)
         return A_full
 
     def get_phase_offset(self):
@@ -72,7 +61,7 @@ class DataLoader:
 
 def simulate(params):
     spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
-    dataloader = DataLoader(folder="./fuer_arda")
+    dataloader = DataLoader(folder="./fuer_arda", params=params)
 
     A_full = dataloader.get_A_full()
     antenna_pos_list = dataloader.get_antenna_position_list()
@@ -85,7 +74,13 @@ def simulate(params):
     xs = []
     initial_beacon_pos = dataloader.get_initial_beacon_pos()
     x = np.array([[initial_beacon_pos[0], initial_beacon_pos[1], initial_beacon_pos[2], 0, 0, 0]]).T
-    sigma = np.eye(len(x)) * 0.1 # try individual values
+
+    sigma = np.array([[params.sigma_x0, 0, 0, 0, 0, 0],
+                       [0, params.sigma_x0, 0, 0, 0, 0],
+                       [0, 0, params.sigma_x0, 0, 0, 0],
+                       [0, 0, 0, params.sigma_v0, 0, 0],
+                       [0, 0, 0, 0, params.sigma_v0, 0],
+                       [0, 0, 0, 0, 0, params.sigma_v0]])
     beamformer = generate_beamformer(beamformer_type=params.beamformer_type)
     recorded_phi_differences = []
     baseleine_phi_differences = []
@@ -305,10 +300,11 @@ def simulate(params):
             H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=params.c,
                                w0=2 * np.pi * params.f)
 
-            K = sigma @ H.T @ np.linalg.inv(R + H @ sigma @ H.T)
 
-            x = x + K @ (utils.mod_2pi(z - h) - H @ (
-                    x_0 - x))  ################################################## in paper: x_0 - x
+            K = sigma @ H.T @ np.linalg.pinv(R + H @ sigma @ H.T)
+            res = (utils.mod_2pi(z - h) - H @ (
+                    x_0 - x))
+            x = x + K @ res ################################################## in paper: x_0 - x
 
         # update
         sigma = (np.eye(len(x)) - K @ H) @ sigma
@@ -336,7 +332,7 @@ def main(params):
     ax.set_zlabel("z(m)")
 
     # ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], 'red')
-    ax.scatter3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
+    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
     #
     trajectory = np.array(trajectory_list).T
     ax.plot3D(trajectory[0, :], trajectory[1, :], trajectory[2, :], "green")

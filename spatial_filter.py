@@ -297,14 +297,7 @@ class SpatialFilter:
                  np.cos(theta_to_remove)])
             signal_to_remove = output_signals[sorted_maxima[k][0], sorted_maxima[k][1]]
 
-            t = np.arange(self.params.N) / self.params.fs
-            z = np.exp(1j * (2 * np.pi * self.params.f * (t.reshape((1, -1))) - np.pi / 2)).reshape(-1)
-            # plt.figure()
-            # plt.plot(signal_to_remove, label="beamformer")
-            # plt.plot(z, label="z")
-            # plt.legend()
-
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 if target_position is not None:
                     signal_to_remove_at_antenna[i, :] = compute_phase_shift_near_field(signal_to_remove, self.params.f,
