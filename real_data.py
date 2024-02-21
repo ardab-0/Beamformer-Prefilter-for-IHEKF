@@ -150,7 +150,7 @@ def simulate(params):
                                                 "s_m": s_m,
                                                 "output_signals": output_signals})
                     beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                    beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
+                    beampattern_cartesian = beampattern_cartesian/3 + antenna.get_t()  # place the pattern on antenna position
                     cartesian_beampattern_list.append(beampattern_cartesian)
 
                 if params.apply_spatial_filter:
@@ -248,8 +248,9 @@ def simulate(params):
                 ax.set_zlabel("z(m)")
                 for beampattern in cartesian_beampattern_list:
                     ax.scatter3D(beampattern[0, :], beampattern[1, :], beampattern[2, :])
-                ax.plot3D(beacon_pos[0], beacon_pos[1], beacon_pos[2], "green")
-                # ax.scatter3D(trajectory[0, :], beacon_pos[1], beacon_pos[2], c="red")
+                ax.scatter3D(beacon_pos[0], beacon_pos[1], beacon_pos[2], c="green")
+                trajectory = np.array(trajectory_list).T
+                ax.plot3D(trajectory[0, :], trajectory[1, :], trajectory[2, :], c="red")
 
                 fig, ax = plt.subplots(2, 2, subplot_kw={"projection": "3d"})
                 for i, beampattern_2d in enumerate(beampattern_2d_list):
