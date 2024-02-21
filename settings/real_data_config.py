@@ -6,7 +6,7 @@ class Parameters:
     room_x = [-5, 5]  # m
     room_y = [-5, 5]  # m
     room_z = [0, 3]  # m
-    sigma_phi = 0.16  #
+    sigma_phi = 0.35  # phase noise in radian
     sigma_a = 9.81/8 # m/s**2
     sigma_x0 = 0.1 # initial position uncertaintyy
     sigma_v0 = 0.1 # initial velocity uncertainty
