@@ -7,9 +7,9 @@ class Parameters:
     room_y = [-5, 5]  # m
     room_z = [0, 3]  # m
     sigma_phi = 0.16  #
-    sigma_a = 1 # m/s**2
-    sigma_x0 = 0.01 # initial position uncertaintyy
-    sigma_v0 = 0.05 # initial velocity uncertainty
+    sigma_a = 9.81/8 # m/s**2
+    sigma_x0 = 0.1 # initial position uncertaintyy
+    sigma_v0 = 0.1 # initial velocity uncertainty
 
     dt = 0.01  # s
     N_theta = 100
@@ -18,7 +18,7 @@ class Parameters:
 
 
     antenna_kind = "x_12"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [ 5, 8 ]  # antenna number to include at each iteration
+    i_list = [ 5, 8 , 12]  # antenna number to include at each iteration
 
     visualize_beampatterns = False
     measure_phi_m_directly = False

@@ -336,9 +336,9 @@ def simulate(params):
                 raise ValueError('jacobian_type is incorrect.')
 
             K = sigma @ H.T @ np.linalg.inv(R + H @ sigma @ H.T)
-
-            x = x + K @ (utils.mod_2pi(z - h) - H @ (
-                    x_0 - x))  ################################################## in paper: x_0 - x
+            res = utils.mod_2pi(z - h - H @ (
+                    x_0 - x))
+            x = x + K @ res  ################################################## in paper: x_0 - x
 
         # update
         sigma = (np.eye(len(x)) - K @ H) @ sigma
@@ -378,15 +378,15 @@ def main(params):
 
     print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
 
-    recorded_phi_differences = np.asarray(recorded_phi_differences)
-    recorded_phi_differences = recorded_phi_differences.squeeze()
-    filename = "multipath"
-    np.save(filename, recorded_phi_differences)
-
-    baseleine_phi_differences = np.asarray(baseleine_phi_differences)
-    baseleine_phi_differences = baseleine_phi_differences.squeeze()
-    filename = "los"
-    np.save(filename, baseleine_phi_differences)
+    # recorded_phi_differences = np.asarray(recorded_phi_differences)
+    # recorded_phi_differences = recorded_phi_differences.squeeze()
+    # filename = "multipath"
+    # np.save(filename, recorded_phi_differences)
+    #
+    # baseleine_phi_differences = np.asarray(baseleine_phi_differences)
+    # baseleine_phi_differences = baseleine_phi_differences.squeeze()
+    # filename = "los"
+    # np.save(filename, baseleine_phi_differences)
 
     plt.show()
 

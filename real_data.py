@@ -302,7 +302,9 @@ def simulate(params):
 
 
             K = sigma @ H.T @ np.linalg.pinv(R + H @ sigma @ H.T)
-            res = (utils.mod_2pi(z - h) - H @ (
+            # res = (utils.mod_2pi(z - h) - H @ (
+            #         x_0 - x))
+            res = utils.mod_2pi(z - h - H @ (
                     x_0 - x))
             x = x + K @ res ################################################## in paper: x_0 - x
 
