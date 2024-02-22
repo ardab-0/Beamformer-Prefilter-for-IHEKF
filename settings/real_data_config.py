@@ -8,20 +8,20 @@ class Parameters:
     room_z = [0, 3]  # m
     sigma_phi = 0.35  # phase noise in radian
     sigma_a = 9.81 / 8  # m/s**2
-    sigma_x0 = 0.1  # initial position uncertaintyy
+    sigma_x0 = 0.1  # initial position uncertainty
     sigma_v0 = 0.1  # initial velocity uncertainty
-
+    N = 7000
     dt = 0.01  # s
     N_theta = 100
     N_phi = 100
-    apply_element_pattern = True
+    apply_element_pattern = False
 
     antenna_kind = "x_12"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [5, 8, 12]  # antenna number to include at each iteration
 
     visualize_beampatterns = True
     measure_phi_m_directly = False
-    apply_spatial_filter = False
+    apply_spatial_filter = True
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
 
@@ -32,5 +32,7 @@ class Parameters:
     target_theta_range_deg = 4
     cone_angle = 10
 
+    iteration_count = 2
+    data_length_ratio = 0.05
 
 VERBOSE = True
