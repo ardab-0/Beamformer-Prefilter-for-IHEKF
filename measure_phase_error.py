@@ -18,7 +18,7 @@ np.random.seed(10)
 
 spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
 
-antenna_element_positions, A_full = generate_antenna_element_positions(kind="square_8_8", lmb=params.lmb,
+antenna_element_positions, A_full = generate_antenna_element_positions(kind="2_6-3-8-d=1", lmb=params.lmb,
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
@@ -69,8 +69,8 @@ for i in range(SAMPLE):
                                                     beacon_pos=beacon_pos[:, k].reshape((-1, 1)),
                                                     phi_B=phi_B, sigma=0, multipath_sources=[])
 
-        phi = sim.measure_phi(s_m=s_m, f_m=params.f, t=t)
-        phi_no_multipath = sim.measure_phi(s_m=s_m_no_multipath, f_m=params.f, t=t)
+        phi = sim.measure_phi(s_m=s_m)
+        phi_no_multipath = sim.measure_phi(s_m=s_m_no_multipath)
         recorded_phi_differences.append(utils.mod_2pi(A_full @ phi))
         recorded_phi_no_multipath_differences.append(utils.mod_2pi(A_full @ phi_no_multipath))
 
@@ -165,7 +165,7 @@ for i in range(SAMPLE):
         #                                                        # reflection_position=np.array([multipath["x"], multipath["y"], multipath["z"]])
         #                                                        )
 
-        phi_filtered = sim.measure_phi(s_m=s_m_filtered, f_m=params.f, t=t)
+        phi_filtered = sim.measure_phi(s_m=s_m_filtered)
         recorded_phi_filtered_differences.append(utils.mod_2pi(A_full @ phi_filtered))
 
         if visualize:

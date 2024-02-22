@@ -77,8 +77,8 @@ class SpatialFilter:
         peak_thetas = thetas[sorted_maxima[:, 1]]
         peak_phis = phis[sorted_maxima[:, 0]]
         filtered_peak_thetas, filtered_peak_phis, sorted_maxima = self.remove_close_peaks(peak_thetas, peak_phis,
-                                                                                     sorted_maxima,
-                                                                                     eps=0.2)
+                                                                                          sorted_maxima,
+                                                                                          eps=0.2)
 
         for k in range(1, min(self.params.num_peaks_to_remove + 1, len(filtered_peak_thetas))):
             theta_to_remove = filtered_peak_thetas[k]
@@ -90,7 +90,7 @@ class SpatialFilter:
                  np.cos(theta_to_remove)])
             signal_to_remove = output_signals[sorted_maxima[k][0], sorted_maxima[k][1]]
 
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
 
@@ -273,9 +273,9 @@ class SpatialFilter:
             # without sidelobe
             # peak_thetas, peak_phis, sorted_maxima = remove_close_peaks(peak_thetas, peak_phis, sorted_maxima, eps=0.3)
             peak_thetas, peak_phis, sorted_maxima = self.keep_target(peak_thetas,
-                                                                peak_phis, sorted_maxima,
-                                                                target_theta, target_phi, cone_angle=cone_angle
-                                                                )
+                                                                     peak_phis, sorted_maxima,
+                                                                     target_theta, target_phi, cone_angle=cone_angle
+                                                                     )
             # # with sidelobe
             # peak_thetas, peak_phis, sorted_maxima = remove_target_with_sidelobes(peak_thetas, peak_phis, sorted_maxima, beamformer, antenna, target_theta,
             #                              target_phi, 0.1, peak_threshold)
@@ -312,7 +312,8 @@ class SpatialFilter:
 
         return signal_to_remove_at_antenna, True
 
-    def ground_reflection_filter(self, x, r, target_x, target_y, target_z, cone_angle, peak_threshold, beamformer, antenna,
+    def ground_reflection_filter(self, x, r, target_x, target_y, target_z, cone_angle, peak_threshold, beamformer,
+                                 antenna,
                                  reflection_position=None):
         reflection_dir = np.array([target_x, target_y, -target_z]).reshape((-1, 1)) - antenna.get_t()
         reflection_r, reflection_theta, reflection_phi = utils.cartesian_to_spherical(reflection_dir[0],
@@ -339,12 +340,12 @@ class SpatialFilter:
         peak_phis = phis[sorted_maxima[:, 0]]
 
         peak_thetas, peak_phis, sorted_maxima = self.keep_target(peak_thetas,
-                                                            peak_phis,
-                                                            sorted_maxima,
-                                                            reflection_theta,
-                                                            reflection_phi,
-                                                            cone_angle=cone_angle
-                                                            )
+                                                                 peak_phis,
+                                                                 sorted_maxima,
+                                                                 reflection_theta,
+                                                                 reflection_phi,
+                                                                 cone_angle=cone_angle
+                                                                 )
 
         if len(peak_thetas) == 0:
             return filtered_x
@@ -359,10 +360,11 @@ class SpatialFilter:
              np.cos(theta_to_remove)])
         signal_to_remove = output_signals[sorted_maxima[0][0], sorted_maxima[0][1]]
 
-        signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+        signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
         for i in range(N_array):
             if reflection_position is not None:
-                signal_to_remove_at_antenna[i, :] = compute_phase_shift_near_field(signal_to_remove, self.params.f, r[:, i],
+                signal_to_remove_at_antenna[i, :] = compute_phase_shift_near_field(signal_to_remove, self.params.f,
+                                                                                   r[:, i],
                                                                                    reflection_position)
             else:
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
@@ -409,23 +411,23 @@ class SpatialFilter:
         peak_phis = phis[sorted_maxima[:, 0]]
 
         target_thetas, target_phis, target_sorted_maxima = self.keep_target(peak_thetas,
-                                                                       peak_phis,
-                                                                       sorted_maxima,
-                                                                       target_theta,
-                                                                       target_phi,
-                                                                       cone_angle=cone_angle
-                                                                       )
+                                                                            peak_phis,
+                                                                            sorted_maxima,
+                                                                            target_theta,
+                                                                            target_phi,
+                                                                            cone_angle=cone_angle
+                                                                            )
 
         if len(target_thetas) == 0:
             raise ValueError("Target is not detected")
 
         non_target_thetas, non_target_phis, non_target_sorted_maxima = self.remove_target(peak_thetas,
-                                                                                     peak_phis,
-                                                                                     sorted_maxima,
-                                                                                     target_theta,
-                                                                                     target_phi,
-                                                                                     cone_angle,
-                                                                                     )
+                                                                                          peak_phis,
+                                                                                          sorted_maxima,
+                                                                                          target_theta,
+                                                                                          target_phi,
+                                                                                          cone_angle,
+                                                                                          )
         target = {"theta": target_thetas[0],
                   "phi": target_phis[0],
                   "maxima": target_sorted_maxima[0],
@@ -442,7 +444,7 @@ class SpatialFilter:
                  np.cos(theta_to_remove)])
             signal_to_remove = output_signals[non_target_sorted_maxima[i][0], non_target_sorted_maxima[i][1]]
 
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
             filtered_x -= signal_to_remove_at_antenna
@@ -477,12 +479,12 @@ class SpatialFilter:
             peak_phis = phis[sorted_maxima[:, 0]]
 
             target_thetas, target_phis, target_sorted_maxima = self.keep_target(peak_thetas,
-                                                                           peak_phis,
-                                                                           sorted_maxima,
-                                                                           target_theta,
-                                                                           target_phi,
-                                                                           cone_angle=cone_angle,
-                                                                           )
+                                                                                peak_phis,
+                                                                                sorted_maxima,
+                                                                                target_theta,
+                                                                                target_phi,
+                                                                                cone_angle=cone_angle,
+                                                                                )
 
             if len(target_thetas) == 0:
                 continue
@@ -493,7 +495,7 @@ class SpatialFilter:
         return filtered_x
 
     def iterative_max_2D_filter(self, x, r, beamformer, antenna, peak_threshold, target_theta=None, target_phi=None,
-                                cone_angle=None, max_iteration=sys.maxsize):
+                                cone_angle=None, max_iteration=sys.maxsize, antennas_used_in_beamformer=None):
         """
         removes the peaks iteratively while keeping the target peaks intact
 
@@ -515,16 +517,17 @@ class SpatialFilter:
 
         # remove estimated target signal first
         target_only_x_estimate, _ = self.two_step_filter(x=x,
-                                                    r=r,
-                                                    beamformer=beamformer,
-                                                    antenna=antenna,
-                                                    peak_threshold=0.1,
-                                                    target_theta=target_theta,
-                                                    target_phi=target_phi,
-                                                    cone_angle=cone_angle,
-                                                    num_of_removed_signals=1,
-                                                    # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
-                                                    )
+                                                         r=r,
+                                                         beamformer=beamformer,
+                                                         antenna=antenna,
+                                                         peak_threshold=0.1,
+                                                         target_theta=target_theta,
+                                                         target_phi=target_phi,
+                                                         cone_angle=cone_angle,
+                                                         num_of_removed_signals=1,
+                                                         # target_position=beacon_pos[:3, k].reshape(-1) + np.random.randn(3)*0.05
+                                                         antennas_used_in_beamformer=antennas_used_in_beamformer
+                                                         )
 
         x_without_target = x - target_only_x_estimate
 
@@ -537,12 +540,11 @@ class SpatialFilter:
         # theta, phi = np.meshgrid(thetas, phis)
         #
         # surf = ax.plot_surface(theta, phi, results,
-        #                        linewidth=0, antialiased=False, cmap=cm.coolwarm, vmin=0, vmax=1)
+        #                        linewidth=0, antialiased=False, cmap=cm.coolwarm)
         # ax.set_xlabel("theta (rad)")
         # ax.set_ylabel("phi (rad)")
         # ax.set_zlabel("power")
         # ax.view_init(azim=0, elev=90)
-        # # Add a color bar which maps values to colors.
         # fig.colorbar(surf, shrink=0.5, aspect=5, )
         #
         # results, output_signals, thetas, phis = beamformer.compute_beampattern(x=target_only_x_estimate,
@@ -555,38 +557,44 @@ class SpatialFilter:
         # theta, phi = np.meshgrid(thetas, phis)
         #
         # surf = ax.plot_surface(theta, phi, results,
-        #                        linewidth=0, antialiased=False, cmap=cm.coolwarm, vmin=0, vmax=1)
+        #                        linewidth=0, antialiased=False, cmap=cm.coolwarm)
         # ax.set_xlabel("theta (rad)")
         # ax.set_ylabel("phi (rad)")
         # ax.set_zlabel("power")
         # ax.view_init(azim=0, elev=90)
-        # ax.set_zlim([0, 1])
-        # # Add a color bar which maps values to colors.
         # fig.colorbar(surf, shrink=0.5, aspect=5)
 
         while is_peak_removed and i < max_iteration:
             if VERBOSE:
                 print(f"Iterative max 2d filter, iter: {i}, threshold: {peak_threshold}")
-            results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x_without_target,
-                                                                                   N_theta=self.params.N_theta,
-                                                                                   N_phi=self.params.N_phi,
-                                                                                   fs=self.params.fs,
-                                                                                   r=antenna.get_antenna_positions())
+            if antennas_used_in_beamformer is None:
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(x=x_without_target,
+                                                                                       N_theta=self.params.N_theta,
+                                                                                       N_phi=self.params.N_phi,
+                                                                                       fs=self.params.fs,
+                                                                                       r=antenna.get_antenna_positions())
+            else:
+                results, output_signals, thetas, phis = beamformer.compute_beampattern(
+                    x=x_without_target[:antennas_used_in_beamformer],
+                    N_theta=self.params.N_theta,
+                    N_phi=self.params.N_phi,
+                    fs=self.params.fs,
+                    r=antenna.get_antenna_positions()[:, :antennas_used_in_beamformer])
 
             element_beampattern, theta_e, phi_e = antenna.get_antenna_element_beampattern(thetas=thetas,
                                                                                           phis=phis)
             results *= element_beampattern
 
             filtered_x_without_target, filtered_x, is_peak_removed = self.remove_max_2D(x=x_without_target,
-                                                                                   r=r,
-                                                                                   results=results,
-                                                                                   phis=phis,
-                                                                                   thetas=thetas,
-                                                                                   output_signals=output_signals,
-                                                                                   peak_threshold=peak_threshold,
-                                                                                   num_of_removed_peaks=1,
-                                                                                   beamformer=beamformer,
-                                                                                   antenna=antenna, x2=filtered_x)
+                                                                                        r=r,
+                                                                                        results=results,
+                                                                                        phis=phis,
+                                                                                        thetas=thetas,
+                                                                                        output_signals=output_signals,
+                                                                                        peak_threshold=peak_threshold,
+                                                                                        num_of_removed_peaks=1,
+                                                                                        beamformer=beamformer,
+                                                                                        antenna=antenna, x2=filtered_x)
 
             x_without_target = filtered_x_without_target
 
@@ -602,7 +610,7 @@ class SpatialFilter:
             # theta, phi = np.meshgrid(thetas, phis)
             #
             # surf = ax.plot_surface(theta, phi, results,
-            #                        linewidth=0, antialiased=False, cmap=cm.coolwarm, vmin=0, vmax=1)
+            #                        linewidth=0, antialiased=False, cmap=cm.coolwarm)
             # ax.set_xlabel("theta (rad)")
             # ax.set_ylabel("phi (rad)")
             # ax.set_zlabel("power")
@@ -662,7 +670,7 @@ class SpatialFilter:
                  np.cos(theta_to_remove)])
             signal_to_remove = output_signals[sorted_maxima[k][0], sorted_maxima[k][1]]
 
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
 
@@ -704,7 +712,7 @@ class SpatialFilter:
                 [np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
             signal_to_remove = output_signals[sorted_maxima[k]]
 
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
 
@@ -736,20 +744,20 @@ class SpatialFilter:
         peak_phis = phis[sorted_maxima[:, 0]]
 
         target_peak_thetas, target_peak_phis, target_sorted_maxima = self.keep_target(peak_thetas,
-                                                                                 peak_phis,
-                                                                                 sorted_maxima,
-                                                                                 target_theta,
-                                                                                 target_phi,
-                                                                                 cone_angle=cone_angle,
-                                                                                 )
+                                                                                      peak_phis,
+                                                                                      sorted_maxima,
+                                                                                      target_theta,
+                                                                                      target_phi,
+                                                                                      cone_angle=cone_angle,
+                                                                                      )
 
         non_target_peak_thetas, non_target_peak_phis, non_target_sorted_maxima = self.remove_target(peak_thetas,
-                                                                                               peak_phis,
-                                                                                               sorted_maxima,
-                                                                                               target_theta,
-                                                                                               target_phi,
-                                                                                               cone_angle=cone_angle,
-                                                                                               )
+                                                                                                    peak_phis,
+                                                                                                    sorted_maxima,
+                                                                                                    target_theta,
+                                                                                                    target_phi,
+                                                                                                    cone_angle=cone_angle,
+                                                                                                    )
 
         detected_target_theta = target_peak_thetas[0]
         detected_target_phi = target_peak_phis[0]
@@ -780,7 +788,7 @@ class SpatialFilter:
                  np.cos(theta_to_remove)])
             signal_to_remove = output_signals[non_target_sorted_maxima[i][0], non_target_sorted_maxima[i][1]]
 
-            signal_to_remove_at_antenna = np.zeros((N_array, self.params.N), dtype=complex)
+            signal_to_remove_at_antenna = np.zeros((x.shape[0], x.shape[1]), dtype=complex)
             for i in range(N_array):
                 signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, self.params.f, u, r[:, i])
             filtered_x -= signal_to_remove_at_antenna

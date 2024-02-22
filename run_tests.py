@@ -22,22 +22,44 @@ def run_test(test_result_directory="test_results"):
         os.makedirs(test_result_directory)
 
     test_parameters = [
-        
-        
 
+        Parameters(sigma_a=5, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=5, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=5, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=6, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=6, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=6, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=7, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=7, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=7, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=8, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=8, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=8, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=9, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=9, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=9, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=10, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=10, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
+        Parameters(sigma_a=10, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=True),
 
-        Parameters(i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", N=200, sigma_a=10),
-
-
-        # Parameters(sigma_a=5, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=5, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=5, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=7, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=7, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=7, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=9, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=9, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
-        # Parameters(sigma_a=9, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=5, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=5, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=5, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=6, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=6, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=6, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=7, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=7, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=7, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=8, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=9, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=9, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=9, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12, 14,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
+        Parameters(sigma_a=10, i_list=(12, 14, 16,), antenna_kind="2_6-3-8-d=1", apply_spatial_filter=False),
     ]
 
     now = datetime.now()
@@ -48,7 +70,7 @@ def run_test(test_result_directory="test_results"):
         print(f"\n\nPerforming test {i}")
         print("Parameter configuration:")
         print(parameters)
-        xs, beacon_pos, antenna_list = simulate(params=parameters)
+        xs, beacon_pos, antenna_list, _, _ = simulate(params=parameters)
         rmse = utils.rmse(xs[:, :3].T, beacon_pos)
         parameters_dict = asdict(parameters)
         parameters_dict_str = convert_dict_values_to_str(parameters_dict)

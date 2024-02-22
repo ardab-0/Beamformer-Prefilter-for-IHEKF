@@ -15,7 +15,7 @@ class Parameters:
     N_phi = 200
     N = 100
     jacobian_type = "numpy"  # "numpy" or "scipy"
-    apply_element_pattern = True
+    apply_element_pattern = False
 
     use_multipath = True  # True or False
     multipath_count = 4
