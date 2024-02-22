@@ -1,5 +1,8 @@
+import time
+
 import numpy as np
 from settings.config import Parameters as params
+import torch
 
 
 class DelayAndSumBeamformer:
@@ -57,7 +60,10 @@ class DelayAndSumBeamformer:
             [np.sin(theta_sweep) * np.cos(phi_sweep), np.sin(theta_sweep) * np.sin(phi_sweep),
              np.cos(theta_sweep)])
 
+
         v = np.tensordot(r.T, u_sweep, axes=1)
+
+
         H = np.exp(-1j * 2 * np.pi * params.f * v / params.c)
         out = np.tensordot(x.T, H, axes=1)
         out /= N_array
@@ -65,9 +71,9 @@ class DelayAndSumBeamformer:
         results = np.mean(np.abs(out) ** 2, axis=0)
 
         results = np.sqrt(results)  # power to amplitude conversion
-        results /= np.max(results)
+        # results /= np.max(results)
         return results, output_signals, thetas, phis
-    def __compute_beampatern_gpu(self, x, N_theta, N_phi, fs, r):
+    def __compute_beampatern_gpu(self, x, thetas, phis, fs, r):
         raise NotImplementedError
 
 
