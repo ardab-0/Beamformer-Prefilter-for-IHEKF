@@ -1,12 +1,12 @@
 class Parameters:
     f = 24e9  # Hz
     fs = f * 100
-    c = 2.998e8  # m/s
+    c = 3e8  # m/s
     lmb = c / f  # m
     room_x = [-5, 5]  # m
     room_y = [-5, 5]  # m
     room_z = [0, 3]  # m
-    sigma_phi = 0.35  # phase noise in radian
+    sigma_phi = 0.17 # phase noise in radian
     sigma_a = 9.81 / 8  # m/s**2
     sigma_x0 = 0.1  # initial position uncertainty
     sigma_v0 = 0.1  # initial velocity uncertainty
@@ -19,9 +19,9 @@ class Parameters:
     antenna_kind = "x_12"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [5, 8, 12]  # antenna number to include at each iteration
 
-    visualize_beampatterns = True
+    visualize_beampatterns = False
     measure_phi_m_directly = False
-    apply_spatial_filter = True
+    apply_spatial_filter = False
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
 
@@ -33,6 +33,6 @@ class Parameters:
     cone_angle = 10
 
     iteration_count = 2
-    data_length_ratio = 0.05
+    data_length_ratio = 1
 
 VERBOSE = True

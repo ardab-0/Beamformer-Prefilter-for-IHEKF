@@ -20,8 +20,8 @@ class Parameters:
     use_multipath = True  # True or False
     multipath_count = 4
 
-    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [12, 14, 16]  # antenna number to include at each iteration
+    antenna_kind = "cross"  # "original" or "square_4_4" or "irregular_4_4"
+    i_list = [ 16]  # antenna number to include at each iteration
 
     visualize_beampatterns = False
     measure_phi_m_directly = False
@@ -42,4 +42,4 @@ class Parameters:
     spatial_filter_initialization_index = 0
 
 
-VERBOSE = False
+VERBOSE = True

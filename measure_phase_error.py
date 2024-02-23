@@ -18,7 +18,7 @@ np.random.seed(10)
 
 spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
 
-antenna_element_positions, A_full = generate_antenna_element_positions(kind="2_6-3-8-d=1", lmb=params.lmb,
+antenna_element_positions, A_full = generate_antenna_element_positions(kind="cross", lmb=params.lmb,
                                                                        get_A_full=True)
 antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
