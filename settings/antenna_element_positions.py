@@ -379,3 +379,23 @@ def generate_antenna_element_positions(kind: str, lmb: float, get_A_full: bool =
         return antenna_element_positions, A_full
     else:
         raise ValueError("Wrong antenna kind.")
+
+
+
+
+ant = np.array([[56.25, 56.75], # 0
+                [68.75, 56.75],
+                [56.25, 69.25],
+                [68.75, 69.25],
+                [56.25, 81.75],
+                [68.75, 81.75],
+                [56.25, 94.25],
+                [68.75, 94.25],
+                [56.25, 106.75],
+                [68.75, 106.75],
+                [56.25, 119.25],
+                [68.75, 119.25], # 12
+                [106.25, 119.25],
+                [68.75, 156.75],
+                [168.75, 119.25],
+                [68.75, 219.25], ])

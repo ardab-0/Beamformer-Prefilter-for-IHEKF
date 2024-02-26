@@ -148,30 +148,30 @@ def simulate(params):
                             # s_m = spatial_filter_collection.remove_components_2D(x=s_m, r=ant_pos,
                             #                            results=results, phis=phis, thetas=thetas,
                             #                            output_signals=output_signals)
-                            s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
-                                                                                  r=ant_pos,
-                                                                                  beamformer=beamformer,
-                                                                                  antenna=antenna,
-                                                                                  peak_threshold=0.1,
-                                                                                  target_theta=target_dir_theta,
-                                                                                  target_phi=target_dir_phi,
-                                                                                  cone_angle=np.deg2rad(
-                                                                                      params.cone_angle),
-                                                                                  max_iteration=params.multipath_count) # needs to be adaptive
-                            # s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
-                            #                                         r=ant_pos,
-                            #                                         beamformer=beamformer,
-                            #                                         antenna=antenna,
-                            #                                         peak_threshold=0.1,
-                            #                                         target_theta=target_dir_theta,
-                            #                                         target_phi=target_dir_phi,
-                            #                                         cone_angle=np.deg2rad(
-                            #                                             params.cone_angle),
-                            #                                         num_of_removed_signals=1,
-                            #                                         antennas_used_in_beamformer=antennas_used_in_beamformer,
-                            #                                         # uses only the first iteration's antennas in beamformer
-                            #                                         # target_position=x_0[:3].reshape(-1)
-                            #                                         )
+                            # s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
+                            #                                                       r=ant_pos,
+                            #                                                       beamformer=beamformer,
+                            #                                                       antenna=antenna,
+                            #                                                       peak_threshold=0.1,
+                            #                                                       target_theta=target_dir_theta,
+                            #                                                       target_phi=target_dir_phi,
+                            #                                                       cone_angle=np.deg2rad(
+                            #                                                           params.cone_angle),
+                            #                                                       max_iteration=params.multipath_count) # needs to be adaptive
+                            s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
+                                                                    r=ant_pos,
+                                                                    beamformer=beamformer,
+                                                                    antenna=antenna,
+                                                                    peak_threshold=0.1,
+                                                                    target_theta=target_dir_theta,
+                                                                    target_phi=target_dir_phi,
+                                                                    cone_angle=np.deg2rad(
+                                                                        params.cone_angle),
+                                                                    num_of_removed_signals=1,
+                                                                    antennas_used_in_beamformer=antennas_used_in_beamformer,
+                                                                    # uses only the first iteration's antennas in beamformer
+                                                                    # target_position=x_0[:3].reshape(-1)
+                                                                    )
 
                             # s_m = spatial_filter_collection.multipath_filter(x=s_m,
                             #                                       r=ant_pos,
