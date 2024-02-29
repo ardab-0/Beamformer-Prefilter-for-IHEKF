@@ -77,7 +77,7 @@ def simulate(params):
                                                                                               target_dir[1],
                                                                                               target_dir[2])
 
-                real_target_dir = x[:3].reshape((-1, 1)) - antenna.get_t()
+                real_target_dir = beacon_pos[:, k].reshape((-1, 1)) - antenna.get_t()
                 real_target_dir_r, real_target_dir_theta, real_target_dir_phi = utils.cartesian_to_spherical(
                     real_target_dir[0], real_target_dir[1],
                     real_target_dir[2])
