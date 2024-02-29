@@ -65,7 +65,8 @@ def generate_spiral_path(a, theta_extent, alpha):
 
 
 def rmse(x, x_hat):
-    return np.sqrt(np.mean(np.square(x - x_hat)))
+    a = np.linalg.norm(x - x_hat, axis=0)
+    return np.sqrt(np.mean(np.square(a)))
 
 def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
