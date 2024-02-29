@@ -77,6 +77,8 @@ class RealDataAntennaArray(AntennaArray):
         R, t = utils.optimal_rotation_and_translation(self.model_antenna_element_positions,
                                                       self.antenna_element_positions)
 
+        # t = np.mean(self.antenna_element_positions, axis=1).reshape((3, 1))
+
         # fig = plt.figure()
         # ax = plt.axes(projection="3d")
         #
@@ -96,7 +98,7 @@ class RealDataAntennaArray(AntennaArray):
         return self.antenna_element_positions
 
     def _compute_theta_phi(self):
-        initial_direction = np.array([[0, -1, 0]]).T
+        initial_direction = np.array([[0, 1, 0]]).T
 
         new_direction = self._R @ initial_direction
         r, theta, phi = cartesian_to_spherical(new_direction[0], new_direction[1], new_direction[2])
