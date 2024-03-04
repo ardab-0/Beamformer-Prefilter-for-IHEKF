@@ -28,8 +28,11 @@ class DataLoader:
         self.phase_offset = np.stack([phase_offset_id10, phase_offset_id11, phase_offset_id12], axis=0)
 
         del ant_pos_id10, ant_pos_id11, ant_pos_id12, phase_offset_id10, phase_offset_id11, phase_offset_id12
+        self.array_normalization_coef_0 = np.load(f"amplitude_normalization_coefficients/normalization_coef_array0.npy")
+        self.array_normalization_coef_1 = np.load(f"amplitude_normalization_coefficients/normalization_coef_array1.npy")
+        self.array_normalization_coef_2 = np.load(f"amplitude_normalization_coefficients/normalization_coef_array2.npy")
 
-        tmp = np.load(f"{folder}/21_no_modulation.npz")
+        tmp = np.load(f"{folder}/data.npz")
         self.raw_data = tmp["raw_data"]
         self.trajectory_optitrack = tmp["trajectory_optitrack"]
         RECORDING_LENTH = tmp["RECORDING_LENTH"]
@@ -43,8 +46,17 @@ class DataLoader:
         t_list = list(np.linspace(0, self.raw_data.shape[1] * (1 / self.sample_rate), num=self.nr_of_meas_points))
         trajectory_list = list(np.array(
             [self.trajectory_optitrack[:, 0], self.trajectory_optitrack[:, 1], self.trajectory_optitrack[:, 2]]).T)
+
+        # apply amplitude correction
+        # self.raw_data[0] /= self.array_normalization_coef_0.reshape((1, -1))
+        # self.raw_data[1] /= self.array_normalization_coef_1.reshape((1, -1))
+        # self.raw_data[2] /= self.array_normalization_coef_2.reshape((1, -1))
+
+        # max = np.max(np.abs(self.raw_data))
+        self.raw_data /= 2000
+
         raw_data_list = np.array_split(self.raw_data[:, :, :], self.nr_of_meas_points, axis=1)
-        length = int( len(raw_data_list) * data_length_ratio )
+        length = int(len(raw_data_list) * data_length_ratio)
         return t_list[:length], trajectory_list[:length], raw_data_list[:length]
 
     def get_initial_beacon_pos(self):
@@ -54,15 +66,66 @@ class DataLoader:
         return self.ant_pos_list
 
     def get_A_full(self):
-        _, A_full = generate_antenna_element_positions(kind=self.params.antenna_kind, lmb=self.params.lmb, get_A_full=True)
+        _, A_full = generate_antenna_element_positions(kind=self.params.antenna_kind, lmb=self.params.lmb,
+                                                       get_A_full=True)
         return A_full
 
     def get_phase_offset(self):
         return self.phase_offset
 
+
+def plot_2d(pos_real, pos_calc):
+    FIG2 = plt.figure()
+    for i, s in zip([0, 1, 2], ['X', 'Y', 'Z']):
+        AX1 = FIG2.add_subplot(311 + i)
+        AX1.plot(pos_real[:, i], label=s + " - real")
+        AX1.plot(pos_calc[:, i], label=s + " - kalman")
+        AX1.legend()
+        AX1.grid()
+        plt.xlabel("steps")
+        plt.ylabel(s + "/m")
+    # plt.subplots_adjust(left=0.12, right=0.97, top=0.95, bottom=0.14)
+    return
+
+
+def phase_correction(s_m, dataloader, antenna_idx):
+    phase_shift = dataloader.get_phase_offset()[antenna_idx].reshape((-1, 1))
+    S_m = np.fft.fft(s_m, axis=1)
+    a = np.exp(-1j * phase_shift)
+    phase_shifted_S_m = S_m * a
+    phase_shifted_s_m = np.fft.ifft(phase_shifted_S_m, axis=1)
+    return phase_shifted_s_m
+
+
+def calculate_phase(x_fft):
+    max_idx = np.argmax(np.abs(x_fft))
+    return np.angle(x_fft[max_idx])
+
+
+def visulize_signal(data, array_nr, time_step):
+    fig, axs = plt.subplots(4, 4)
+    fig.suptitle(f"Raw data for time step {time_step}, array: {array_nr}")
+    for i in range(data.shape[1]):
+        [v, u] = [np.mod(i, 4), int(np.floor(i / 4))]
+        axs[u, v].plot(data[:, i], label=f"Channel {i}")
+        axs[u, v].legend()
+        axs[u, v].grid("minor")
+
+    raw_fft = np.fft.fft(data, axis=0)
+
+    fig, axs = plt.subplots(4, 4)
+    fig.suptitle(f"FFT of data for time step {time_step}, array: {array_nr}")
+    for i in range(data.shape[1]):
+        [v, u] = [np.mod(i, 4), int(np.floor(i / 4))]
+        # print(f"Phase of channel {i}: {calculate_phase(raw_fft[:, i])}")
+        axs[u, v].plot(np.abs(raw_fft[:, i]), label=f"Channel {i}")
+        axs[u, v].legend()
+        axs[u, v].grid("minor")
+
+
 def simulate(params):
     spatial_filter_collection = spatial_filter.SpatialFilter(params=params)
-    dataloader = DataLoader(folder="./fuer_arda", params=params)
+    dataloader = DataLoader(folder=params.folder, params=params)
 
     A_full = dataloader.get_A_full()
     antenna_pos_list = dataloader.get_antenna_position_list()
@@ -76,18 +139,22 @@ def simulate(params):
     initial_beacon_pos = dataloader.get_initial_beacon_pos()
     x = np.array([[initial_beacon_pos[0], initial_beacon_pos[1], initial_beacon_pos[2], 0, 0, 0]]).T
 
-    sigma = np.array([[params.sigma_x0, 0, 0, 0, 0, 0],
-                       [0, params.sigma_x0, 0, 0, 0, 0],
-                       [0, 0, params.sigma_x0, 0, 0, 0],
-                       [0, 0, 0, params.sigma_v0, 0, 0],
-                       [0, 0, 0, 0, params.sigma_v0, 0],
-                       [0, 0, 0, 0, 0, params.sigma_v0]])
+    sigma = np.array([[params.sigma_x0 ** 2, 0, 0, 0, 0, 0],
+                      [0, params.sigma_x0 ** 2, 0, 0, 0, 0],
+                      [0, 0, params.sigma_x0 ** 2, 0, 0, 0],
+                      [0, 0, 0, params.sigma_v0 ** 2, 0, 0],
+                      [0, 0, 0, 0, params.sigma_v0 ** 2, 0],
+                      [0, 0, 0, 0, 0, params.sigma_v0 ** 2]])
     beamformer = generate_beamformer(beamformer_type=params.beamformer_type)
     recorded_phi_differences = []
     baseleine_phi_differences = []
 
     t_list, trajectory_list, raw_data_list = dataloader.get_data(data_length_ratio=params.data_length_ratio)
     for k, (t, beacon_pos, raw_data_snip) in tqdm(enumerate(zip(t_list, trajectory_list, raw_data_list))):
+
+        # subsample raw data to speed up beamformer (?)
+        raw_data_snip = raw_data_snip[:, ::params.step, :]
+
         # prediction
         G = sim.compute_G(params.dt)
         Q = params.sigma_a ** 2 * G @ G.T
@@ -118,17 +185,20 @@ def simulate(params):
                                                                                               target_dir[1],
                                                                                               target_dir[2])
 
-                real_target_dir = x[:3].reshape((-1, 1)) - antenna.get_t()
+                real_target_dir = beacon_pos[:3].reshape((-1, 1)) - antenna.get_t()
                 real_target_dir_r, real_target_dir_theta, real_target_dir_phi = utils.cartesian_to_spherical(
                     real_target_dir[0], real_target_dir[1],
                     real_target_dir[2])
                 if VERBOSE:
                     print(f"Target direction theta: {real_target_dir_theta}, phi: {real_target_dir_phi}")
+                    print(f"Searched target direction theta: {target_dir_theta}, phi: {target_dir_phi}")
 
                 # antennas_used_in_beamformer = params.i_list[0]
                 antennas_used_in_beamformer = i
 
                 s_m = raw_data_snip[antenna_idx, :params.N, :].T
+                s_m = s_m - np.mean(s_m, axis=1).reshape((-1, 1))  # dc correction
+                s_m = phase_correction(s_m, dataloader, antenna_idx)
 
                 if params.apply_element_pattern or params.visualize_beampatterns or params.apply_spatial_filter:
                     results, output_signals, thetas, phis = beamformer.compute_beampattern(
@@ -144,6 +214,7 @@ def simulate(params):
                     results *= element_beampattern
 
                 if params.visualize_beampatterns:
+                    visulize_signal(data=s_m.T, array_nr=0, time_step=k)
                     beampattern_2d_list.append({"results": results,
                                                 "thetas": thetas,
                                                 "phis": phis,
@@ -151,7 +222,7 @@ def simulate(params):
                                                 "s_m": s_m,
                                                 "output_signals": output_signals})
                     beampattern_cartesian = beamformer.spherical_to_cartesian(results, thetas=thetas, phis=phis)
-                    beampattern_cartesian = beampattern_cartesian/3 + antenna.get_t()  # place the pattern on antenna position
+                    beampattern_cartesian = beampattern_cartesian + antenna.get_t()  # place the pattern on antenna position
                     cartesian_beampattern_list.append(beampattern_cartesian)
 
                 if params.apply_spatial_filter:
@@ -159,15 +230,15 @@ def simulate(params):
                     #                            results=results, phis=phis, thetas=thetas,
                     #                            output_signals=output_signals)
                     s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
-                                                                          r=ant_pos,
-                                                                          beamformer=beamformer,
-                                                                          antenna=antenna,
-                                                                          peak_threshold=0.1,
-                                                                          target_theta=target_dir_theta,
-                                                                          target_phi=target_dir_phi,
-                                                                          cone_angle=np.deg2rad(
-                                                                              params.cone_angle),
-                                                                          max_iteration=params.iteration_count) # needs to be adaptive
+                                                                            r=ant_pos_m_i,
+                                                                            beamformer=beamformer,
+                                                                            antenna=antenna,
+                                                                            peak_threshold=0.1,
+                                                                            target_theta=target_dir_theta,
+                                                                            target_phi=target_dir_phi,
+                                                                            cone_angle=np.deg2rad(
+                                                                                params.cone_angle),
+                                                                            max_iteration=params.iteration_count)  # needs to be adaptive
                     # s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
                     #                                                    r=ant_pos,
                     #                                                    beamformer=beamformer,
@@ -220,7 +291,7 @@ def simulate(params):
                                                         "s_m_filtered": s_m,
                                                         "output_signals_filtered": output_signals})
 
-                phi_m = sim.measure_phi(s_m, phase_offset=dataloader.get_phase_offset()[antenna_idx].reshape((-1, 1)))
+                phi_m = sim.measure_phi(s_m, phase_offset=0)  # phase offset is add to s_m directly
 
                 phi.append(phi_m[: i])
 
@@ -240,9 +311,6 @@ def simulate(params):
             if params.visualize_beampatterns:
                 fig = plt.figure()
                 ax = plt.axes(projection="3d")
-                ax.set_xlim(params.room_x)
-                ax.set_ylim(params.room_y)
-                ax.set_zlim(params.room_z)
 
                 ax.set_xlabel("x(m)")
                 ax.set_ylabel("y(m)")
@@ -302,13 +370,12 @@ def simulate(params):
             H = jacobian_numpy(A_np=A, px=x[0, 0], py=x[1, 0], pz=x[2, 0], ant_pos=ant_pos_i, c=params.c,
                                w0=2 * np.pi * params.f)
 
-
             K = sigma @ H.T @ np.linalg.pinv(R + H @ sigma @ H.T)
             # res = (utils.mod_2pi(z - h) - H @ (
             #         x_0 - x))
             res = utils.mod_2pi(z - h - H @ (
                     x_0 - x))
-            x = x + K @ res ################################################## in paper: x_0 - x
+            x = x + K @ res  ################################################## in paper: x_0 - x
 
         # update
         sigma = (np.eye(len(x)) - K @ H) @ sigma
@@ -327,9 +394,6 @@ def main(params):
     fig = plt.figure()
 
     ax = plt.axes(projection="3d")
-    ax.set_xlim(params.room_x)
-    ax.set_ylim(params.room_y)
-    ax.set_zlim(params.room_z)
 
     ax.set_xlabel("x(m)")
     ax.set_ylabel("y(m)")
@@ -344,6 +408,9 @@ def main(params):
     for ant in antenna_list:
         ant_pos = ant.get_antenna_positions()
         ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :])
+
+    # 2D plot
+    plot_2d(pos_real=trajectory.T, pos_calc=xs[:, :3])
 
     print("RMSE: ", utils.rmse(xs[:, :3].T, trajectory))
 

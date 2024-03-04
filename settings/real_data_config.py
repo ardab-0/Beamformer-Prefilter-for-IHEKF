@@ -1,38 +1,34 @@
 class Parameters:
     f = 24e9  # Hz
-    fs = f * 100
-    c = 3e8  # m/s
+    fs = f * 100  # not used in real data
+    c = 2.998e8  # m/s
     lmb = c / f  # m
-    room_x = [-5, 5]  # m
-    room_y = [-5, 5]  # m
-    room_z = [0, 3]  # m
-    sigma_phi = 0.17 # phase noise in radian
-    sigma_a = 9.81 / 8  # m/s**2
-    sigma_x0 = 0.1  # initial position uncertainty
-    sigma_v0 = 0.1  # initial velocity uncertainty
+    sigma_phi = 0.52  # phase noise in radian  (30 deg)
+    sigma_a = 9.81 / 10  # m/s**2
+    sigma_x0 = 0.01  # initial position uncertainty
+    sigma_v0 = 0.01  # initial velocity uncertainty
     N = 7000
     dt = 0.01  # s
     N_theta = 100
     N_phi = 100
-    apply_element_pattern = False
+    apply_element_pattern = False  # applz element pattern in visulization
 
-    antenna_kind = "x_12"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [5, 8, 12]  # antenna number to include at each iteration
+    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
+    i_list = [12, 14, 16]  # antenna number to include at each iteration
 
     visualize_beampatterns = False
-    measure_phi_m_directly = False
-    apply_spatial_filter = False
+    apply_spatial_filter = True
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
-
     peak_threshold = 0.5  # the amplitude threshold to detect peak in spatial filter
     num_peaks_to_remove = 1  # the number of peaks to remove
 
-    target_phi_range_deg = 2
-    target_theta_range_deg = 4
-    cone_angle = 10
+    cone_angle = 5
 
-    iteration_count = 2
-    data_length_ratio = 1
+    iteration_count = 2  # number of iterations in iterative filter
+    data_length_ratio = 0.5
+    step = 60  # subsampling step for raw data at each iteration
+    folder = "./fuer_arda/16"
+
 
 VERBOSE = True

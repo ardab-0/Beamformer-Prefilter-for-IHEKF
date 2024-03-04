@@ -290,7 +290,7 @@ class SpatialFilter:
             theta_to_remove = peak_thetas[k]
             phi_to_remove = peak_phis[k]
             if VERBOSE:
-                print(f"theta and phi to remove (rad): {theta_to_remove}, {phi_to_remove}")
+                print(f"theta and phi to keep (rad): {theta_to_remove}, {phi_to_remove}")
 
             u = np.array(
                 [np.sin(theta_to_remove) * np.cos(phi_to_remove), np.sin(theta_to_remove) * np.sin(phi_to_remove),
@@ -619,7 +619,6 @@ class SpatialFilter:
             # # Add a color bar which maps values to colors.
             # fig.colorbar(surf, shrink=0.5, aspect=5)
 
-        plt.show()
         return filtered_x
 
     def remove_max_2D(self, x, r, results, phis, thetas, output_signals, num_of_removed_peaks,

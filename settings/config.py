@@ -13,19 +13,19 @@ class Parameters:
     dt = 0.01  # s
     N_theta = 200
     N_phi = 200
-    N = 100
+    N = 1000
     jacobian_type = "numpy"  # "numpy" or "scipy"
     apply_element_pattern = False
 
     use_multipath = True  # True or False
-    multipath_count = 4
+    multipath_count = 2
 
-    antenna_kind = "cross"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [ 16]  # antenna number to include at each iteration
+    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
+    i_list = [12, 14, 16]  # antenna number to include at each iteration
 
-    visualize_beampatterns = False
+    visualize_beampatterns = True
     measure_phi_m_directly = False
-    apply_spatial_filter = True
+    apply_spatial_filter = False
 
     k = 50  # number of time steps sampled in path
 
