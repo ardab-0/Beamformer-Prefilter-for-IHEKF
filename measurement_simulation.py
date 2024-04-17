@@ -80,6 +80,19 @@ def generate_multipath_sources(multipath_count):
 
     return sources
 
+def generate_multipath_sources_with_amplitude(multipath_count, amplitude):
+    sources = []
+    for p in range(multipath_count):
+        x = np.random.uniform(params.room_x[0]/2, params.room_x[1]/2)
+        y = np.random.uniform(params.room_y[0]/2, params.room_y[1]/2)
+        z = np.random.uniform(params.room_z[0], params.room_z[1])
+        sources.append({"a": amplitude,
+                        "x": x,
+                        "y": y,
+                        "z": z})
+
+    return sources
+
 
 # def measure_phi(s_m, f_m, t):  # might need to modify mean
 #     phi_lo = np.random.rand() * 2 * np.pi

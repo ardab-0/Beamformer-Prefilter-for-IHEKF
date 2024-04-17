@@ -5,6 +5,7 @@ import spatial_filter
 import utils
 from antenna_array import SimulationAntennaArray
 from beamformer.beamformer import generate_beamformer
+from real_data import plot_2d
 from settings.antenna_element_positions import generate_antenna_element_positions
 from jacobian import Jacobian_h, jacobian_numpy
 import matplotlib.pyplot as plt
@@ -21,11 +22,11 @@ def simulate(params):
                                                                            get_A_full=True)
     antenna_element_positions[[0, 1], :] = antenna_element_positions[[1, 0], :]  # switch x and y rows
 
-    beacon_pos = utils.generate_spiral_path(a=1, theta_extent=5, alpha=np.pi / 45)
+    beacon_pos = utils.generate_spiral_path(a=1, theta_extent=10, alpha=np.pi / 45)
 
-    ant1 = SimulationAntennaArray(rot=[0, 0, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
-    ant2 = SimulationAntennaArray(rot=[0, 0, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
-    ant3 = SimulationAntennaArray(rot=[0, 0, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
+    ant1 = SimulationAntennaArray(rot=[0, 45, 45], t=[-2, -3, 3], element_positions=antenna_element_positions)
+    ant2 = SimulationAntennaArray(rot=[0, 45, 200], t=[4, 2, 3], element_positions=antenna_element_positions)
+    ant3 = SimulationAntennaArray(rot=[0, 45, -60], t=[-2, 3, 3], element_positions=antenna_element_positions)
     antenna_list = [ant1, ant2, ant3]
 
     # initial state
@@ -46,7 +47,8 @@ def simulate(params):
         x = F @ x
         sigma = F @ sigma @ F.T + Q
         phi_B = np.random.rand() * 2 * np.pi  # transmitter phase at time k
-        multipath_sources = sim.generate_multipath_sources(multipath_count=params.multipath_count)
+        # multipath_sources = sim.generate_multipath_sources(multipath_count=params.multipath_count)
+        multipath_sources = sim.generate_multipath_sources_with_amplitude(multipath_count=params.multipath_count, amplitude=params.multipath_amplitude)
         # multipath_sources = [
         #     {"x": beacon_pos[0, k],
         #      "y": beacon_pos[1, k],
@@ -148,30 +150,30 @@ def simulate(params):
                             # s_m = spatial_filter_collection.remove_components_2D(x=s_m, r=ant_pos,
                             #                            results=results, phis=phis, thetas=thetas,
                             #                            output_signals=output_signals)
-                            # s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
-                            #                                                       r=ant_pos,
-                            #                                                       beamformer=beamformer,
-                            #                                                       antenna=antenna,
-                            #                                                       peak_threshold=0.1,
-                            #                                                       target_theta=target_dir_theta,
-                            #                                                       target_phi=target_dir_phi,
-                            #                                                       cone_angle=np.deg2rad(
-                            #                                                           params.cone_angle),
-                            #                                                       max_iteration=params.multipath_count) # needs to be adaptive
-                            s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
-                                                                    r=ant_pos,
-                                                                    beamformer=beamformer,
-                                                                    antenna=antenna,
-                                                                    peak_threshold=0.1,
-                                                                    target_theta=target_dir_theta,
-                                                                    target_phi=target_dir_phi,
-                                                                    cone_angle=np.deg2rad(
-                                                                        params.cone_angle),
-                                                                    num_of_removed_signals=1,
-                                                                    antennas_used_in_beamformer=antennas_used_in_beamformer,
-                                                                    # uses only the first iteration's antennas in beamformer
-                                                                    # target_position=x_0[:3].reshape(-1)
-                                                                    )
+                            s_m = spatial_filter_collection.iterative_max_2D_filter(x=s_m,
+                                                                                  r=ant_pos,
+                                                                                  beamformer=beamformer,
+                                                                                  antenna=antenna,
+                                                                                  peak_threshold=0.1,
+                                                                                  target_theta=target_dir_theta,
+                                                                                  target_phi=target_dir_phi,
+                                                                                  cone_angle=np.deg2rad(
+                                                                                      params.cone_angle),
+                                                                                  max_iteration=params.max_iteration) # needs to be adaptive
+                            # s_m, _ = spatial_filter_collection.two_step_filter(x=s_m,
+                            #                                         r=ant_pos,
+                            #                                         beamformer=beamformer,
+                            #                                         antenna=antenna,
+                            #                                         peak_threshold=0.1,
+                            #                                         target_theta=target_dir_theta,
+                            #                                         target_phi=target_dir_phi,
+                            #                                         cone_angle=np.deg2rad(
+                            #                                             params.cone_angle),
+                            #                                         num_of_removed_signals=1,
+                            #                                         antennas_used_in_beamformer=antennas_used_in_beamformer,
+                            #                                         # uses only the first iteration's antennas in beamformer
+                            #                                         # target_position=x_0[:3].reshape(-1)
+                            #                                         )
 
                             # s_m = spatial_filter_collection.multipath_filter(x=s_m,
                             #                                       r=ant_pos,
@@ -368,14 +370,17 @@ def main(params):
     ax.set_zlabel("z(m)")
 
     # ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], 'red')
-    ax.scatter3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
+    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta',  linestyle="dotted", label="prediction")
     #
-    ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "green")
+    ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "black", linestyle="solid", label="reference")
 
-    for ant in antenna_list:
+    for ant_nr, ant in enumerate(antenna_list):
         ant_pos = ant.get_antenna_positions()
-        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :])
+        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :], label=f"antenna {ant_nr}")
 
+    plt.legend()
+
+    plot_2d(pos_real=beacon_pos[:3, :].T, pos_calc=xs[:, :3])
     print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
 
     # recorded_phi_differences = np.asarray(recorded_phi_differences)

@@ -175,3 +175,50 @@ def optimal_rotation_and_translation(A, B):
     t = centroidB - R @ centroidA
 
     return R, t
+
+
+def plot_antennas_in_plane(antennas, array_nr: int, A_list: [] = []):
+    middle = np.mean(antennas, axis=0)
+    # define a plane
+    mid_to_ant = middle[None, :] - antennas
+
+    # ax = plt.figure().add_subplot(projection='3d')
+    middle_direction = np.array([0.001, 0, 0])
+    for v1 in mid_to_ant:
+        for v2 in mid_to_ant:
+            if not np.all(v1 == v2):
+                a = np.cross(v1, v2)
+                angle = np.arccos(a.dot(middle_direction) / (np.linalg.norm(a) * np.linalg.norm(middle_direction)))
+                if angle < (np.pi / 2 + 1e-6):
+                    middle_direction = middle_direction + a / np.linalg.norm(a)
+
+    rot_vector = np.cross(middle_direction / np.linalg.norm(middle_direction), [0, 0, 1])
+    rot_angle = np.arccos(middle_direction.dot([0, 0, 1]) / (np.linalg.norm(middle_direction)))
+    mid_to_ant_rot = (KF.__rotation_matrix(rot_vector, rot_angle) @ mid_to_ant.T).T
+    # ax = plt.figure().add_subplot(projection='3d')
+    # ax.scatter(mid_to_ant_rot[:,0],mid_to_ant_rot[:,1],mid_to_ant_rot[:,2])
+    # KF_Wrapper.set_axes_equal(ax)
+    ax = plt.figure().add_subplot()
+    ax.axis("equal")
+    ax.scatter(mid_to_ant_rot[:, 0], mid_to_ant_rot[:, 1], color="black")
+    plt.title(f"Array nr: {array_nr}")
+    for i in range(12): plt.text(mid_to_ant_rot[i, 0] + 0.001, mid_to_ant_rot[i, 1] + 0.001, str(i))
+    if len(A_list) != 0:
+        iterations = len(A_list)
+        for i, (color, A) in enumerate(zip(["r", "y", "b", "g"], A_list[::-1])):
+            for x in A:
+                if np.isin(x, -2).any() or np.isin(x, 2).any():  # it is a diffdiff evaluation
+                    [a1_index, a3_index] = [i for i, tmp in enumerate(x) if (tmp == 1 or tmp == -1)]
+                    try:
+                        a2_index = list(x).index(-2)
+                    except:
+                        a2_index = list(x).index(2)
+                    ax.plot(mid_to_ant_rot[[a1_index, a2_index, a3_index], 0],
+                            mid_to_ant_rot[[a1_index, a2_index, a3_index], 1],
+                            color=color, label=f"Itaeration {iterations - i}: diffdiff")
+                else:
+                    a1_index = list(x).index(-1)
+                    a2_index = list(x).index(1)
+                    ax.plot(mid_to_ant_rot[[a1_index, a2_index], 0], mid_to_ant_rot[[a1_index, a2_index], 1],
+                            color=color, label=f"Itaeration {iterations - i}")
+    ax.legend()

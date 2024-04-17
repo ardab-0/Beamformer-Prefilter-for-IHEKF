@@ -6,28 +6,29 @@ class Parameters:
     room_x = [-5, 5]  # m
     room_y = [-5, 5]  # m
     room_z = [0, 3]  # m
-    sigma_phi = 0.17  # 10  # doesn't affect when measure_phi_m_directly is not set
+    sigma_phi = 0.17  # 10
 
     sigma = 0.01  # std of complex gaussian noise (input signal noise)
-    sigma_a = 10  # m/s**2
+    sigma_a = 5  # m/s**2
     dt = 0.01  # s
-    N_theta = 200
-    N_phi = 200
-    N = 1000
+    N_theta = 100
+    N_phi = 100
+    N = 200
     jacobian_type = "numpy"  # "numpy" or "scipy"
     apply_element_pattern = False
 
     use_multipath = True  # True or False
-    multipath_count = 2
+    multipath_count = 3
+    multipath_amplitude = 0.6
 
     antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
     i_list = [12, 14, 16]  # antenna number to include at each iteration
 
-    visualize_beampatterns = True
+    visualize_beampatterns = False
     measure_phi_m_directly = False
-    apply_spatial_filter = False
+    apply_spatial_filter = True
 
-    k = 50  # number of time steps sampled in path
+    k = 200  # number of time steps sampled in path
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
 
@@ -40,6 +41,10 @@ class Parameters:
     target_theta_range_deg = 4
     cone_angle = 10
     spatial_filter_initialization_index = 0
+
+
+    # iterative filter
+    max_iteration = 3
 
 
 VERBOSE = True

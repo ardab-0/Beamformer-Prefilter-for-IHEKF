@@ -83,7 +83,7 @@ def plot_2d(pos_real, pos_calc):
         AX1.legend()
         AX1.grid()
         plt.xlabel("steps")
-        plt.ylabel(s + "/m")
+        plt.ylabel(s + "(m)")
     # plt.subplots_adjust(left=0.12, right=0.97, top=0.95, bottom=0.14)
     return
 
@@ -102,7 +102,7 @@ def calculate_phase(x_fft):
     return np.angle(x_fft[max_idx])
 
 
-def visulize_signal(data, array_nr, time_step):
+def visualize_signal(data, array_nr, time_step):
     fig, axs = plt.subplots(4, 4)
     fig.suptitle(f"Raw data for time step {time_step}, array: {array_nr}")
     for i in range(data.shape[1]):
@@ -214,7 +214,7 @@ def simulate(params):
                     results *= element_beampattern
 
                 if params.visualize_beampatterns:
-                    visulize_signal(data=s_m.T, array_nr=0, time_step=k)
+                    visualize_signal(data=s_m.T, array_nr=0, time_step=k)
                     beampattern_2d_list.append({"results": results,
                                                 "thetas": thetas,
                                                 "phis": phis,
@@ -233,7 +233,7 @@ def simulate(params):
                                                                             r=ant_pos_m_i,
                                                                             beamformer=beamformer,
                                                                             antenna=antenna,
-                                                                            peak_threshold=0.1,
+                                                                            peak_threshold=0.3,
                                                                             target_theta=target_dir_theta,
                                                                             target_phi=target_dir_phi,
                                                                             cone_angle=np.deg2rad(
