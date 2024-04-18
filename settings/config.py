@@ -26,7 +26,7 @@ class Parameters:
 
     visualize_beampatterns = False
     measure_phi_m_directly = False
-    apply_spatial_filter = True
+    apply_spatial_filter = False
 
     k = 200  # number of time steps sampled in path
 
@@ -34,7 +34,7 @@ class Parameters:
 
     min_multipath_amplitude = 0.2
     max_multipath_amplitude = 0.8
-    peak_threshold = 0.5  # the amplitude threshold to detect peak in spatial filter
+    peak_threshold = 0.3  # the amplitude threshold to detect peak in spatial filter
     num_peaks_to_remove = 1  # the number of peaks to remove
 
     target_phi_range_deg = 2

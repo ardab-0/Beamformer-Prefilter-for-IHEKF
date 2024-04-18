@@ -68,6 +68,9 @@ def rmse(x, x_hat):
     a = np.linalg.norm(x - x_hat, axis=0)
     return np.sqrt(np.mean(np.square(a)))
 
+def error_vector(x, x_hat):
+    return np.linalg.norm(x - x_hat, axis=0)
+
 def mod_2pi(x):
     mod = np.mod(x, 2 * np.pi)
     mod[mod >= np.pi] -= 2 * np.pi

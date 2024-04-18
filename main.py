@@ -1,3 +1,7 @@
+import os.path
+from datetime import datetime
+from pathlib import Path
+
 import numpy as np
 import scipy.linalg
 from tqdm import tqdm
@@ -154,7 +158,7 @@ def simulate(params):
                                                                                   r=ant_pos,
                                                                                   beamformer=beamformer,
                                                                                   antenna=antenna,
-                                                                                  peak_threshold=0.1,
+                                                                                  peak_threshold=params.peak_threshold,
                                                                                   target_theta=target_dir_theta,
                                                                                   target_phi=target_dir_phi,
                                                                                   cone_angle=np.deg2rad(
@@ -370,19 +374,41 @@ def main(params):
     ax.set_zlabel("z(m)")
 
     # ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], 'red')
-    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta',  linestyle="dotted", label="prediction")
+    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta', label="prediction")
     #
-    ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "black", linestyle="solid", label="reference")
+    ax.plot3D(beacon_pos[0, :], beacon_pos[1, :], beacon_pos[2, :], "black", linestyle="dotted", label="reference")
 
     for ant_nr, ant in enumerate(antenna_list):
         ant_pos = ant.get_antenna_positions()
-        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :], label=f"antenna {ant_nr}")
+        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :], label=f"antenna {ant_nr}", s=5)
 
     plt.legend()
 
+    # plot 2D cross section of trajectory
     plot_2d(pos_real=beacon_pos[:3, :].T, pos_calc=xs[:, :3])
+
+    # compute ecdf
+    plt.figure()
+    error_vect = utils.error_vector(xs[:, :3].T, beacon_pos)
+    res = scipy.stats.ecdf(error_vect)
+    ax = plt.subplot()
+    res.cdf.plot(ax)
+    ax.set_xlabel('Distance Error (m)')
+    ax.set_ylabel('Cumulative Error Function')
+
+    # print rmse
     print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
 
+    # save trajectory data
+    save_directory = "test_results/simulation_error_vector"
+
+    Path(save_directory).mkdir(parents=True, exist_ok=True)
+    now = datetime.now()
+    filename = now.strftime("%m-%d-%Y_%H-%M-%S") + ".npy"
+    filepath = os.path.join(save_directory, filename)
+    np.save(filepath, error_vect)
+
+    # save phase differences
     # recorded_phi_differences = np.asarray(recorded_phi_differences)
     # recorded_phi_differences = recorded_phi_differences.squeeze()
     # filename = "multipath"

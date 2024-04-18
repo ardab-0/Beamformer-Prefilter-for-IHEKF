@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+from pathlib import Path
 import numpy as np
 import scipy.linalg
 from tqdm import tqdm
@@ -78,8 +81,8 @@ def plot_2d(pos_real, pos_calc):
     FIG2 = plt.figure()
     for i, s in zip([0, 1, 2], ['X', 'Y', 'Z']):
         AX1 = FIG2.add_subplot(311 + i)
-        AX1.plot(pos_real[:, i], label=s + " - real")
-        AX1.plot(pos_calc[:, i], label=s + " - kalman")
+        AX1.plot(pos_real[:, i], label=s + " - reference")
+        AX1.plot(pos_calc[:, i], label=s + " - prediction")
         AX1.legend()
         AX1.grid()
         plt.xlabel("steps")
@@ -233,7 +236,7 @@ def simulate(params):
                                                                             r=ant_pos_m_i,
                                                                             beamformer=beamformer,
                                                                             antenna=antenna,
-                                                                            peak_threshold=0.3,
+                                                                            peak_threshold=params.peak_threshold,
                                                                             target_theta=target_dir_theta,
                                                                             target_phi=target_dir_phi,
                                                                             cone_angle=np.deg2rad(
@@ -400,19 +403,41 @@ def main(params):
     ax.set_zlabel("z(m)")
 
     # ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], 'red')
-    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta')
+    ax.plot3D(xs[:, 0], xs[:, 1], xs[:, 2], c='magenta', label="prediction")
     #
     trajectory = np.array(trajectory_list).T
-    ax.plot3D(trajectory[0, :], trajectory[1, :], trajectory[2, :], "green")
+    ax.plot3D(trajectory[0, :], trajectory[1, :], trajectory[2, :], "black", linestyle="dotted", label="reference")
 
-    for ant in antenna_list:
+    for ant_nr, ant in enumerate(antenna_list):
         ant_pos = ant.get_antenna_positions()
-        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :])
+        ax.scatter3D(ant_pos[0, :], ant_pos[1, :], ant_pos[2, :], label=f"antenna {ant_nr}", s=5)
 
+    plt.legend()
     # 2D plot
     plot_2d(pos_real=trajectory.T, pos_calc=xs[:, :3])
 
+    # compute ecdf
+    plt.figure()
+    error_vect = utils.error_vector(xs[:, :3].T, trajectory)
+    res = scipy.stats.ecdf(error_vect)
+    ax = plt.subplot()
+    res.cdf.plot(ax)
+    ax.set_xlabel('Distance Error (m)')
+    ax.set_ylabel('Cumulative Error Function')
+
+    # print rmse
     print("RMSE: ", utils.rmse(xs[:, :3].T, trajectory))
+
+    # save trajectory data
+    save_directory = "test_results/realdata_error_vector"
+
+    Path(save_directory).mkdir(parents=True, exist_ok=True)
+    now = datetime.now()
+    filename = now.strftime("%m-%d-%Y_%H-%M-%S") + ".npy"
+    filepath = os.path.join(save_directory, filename)
+    # np.save(filepath, error_vect)
+
+
 
     # recorded_phi_differences = np.asarray(recorded_phi_differences)
     # recorded_phi_differences = recorded_phi_differences.squeeze()

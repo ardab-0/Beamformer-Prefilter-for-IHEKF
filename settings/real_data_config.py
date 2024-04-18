@@ -20,7 +20,7 @@ class Parameters:
     apply_spatial_filter = False
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
-    peak_threshold = 0.5  # the amplitude threshold to detect peak in spatial filter
+    peak_threshold = 0.3  # the amplitude threshold to detect peak in spatial filter
     num_peaks_to_remove = 1  # the number of peaks to remove
 
     cone_angle = 5
@@ -28,7 +28,7 @@ class Parameters:
     iteration_count = 1 # number of iterations in iterative filter
     data_length_ratio = 1
     step = 60  # subsampling step for raw data at each iteration
-    folder = "./fuer_arda/5"
+    folder = "./fuer_arda/16"
 
 
 VERBOSE = True
