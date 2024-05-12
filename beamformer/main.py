@@ -6,7 +6,7 @@ from scipy.signal import argrelextrema
 phi = 0.0
 
 theta1 = 60.0 / 180 * np.pi
-theta2 = 30.0 / 180 * np.pi
+theta2 = 120.0 / 180 * np.pi
 theta3 = 75.0 / 180 * np.pi
 N_array = 8
 
@@ -34,13 +34,7 @@ for i in range(N_array):
 
 print(r)
 
-u_list = [np.array([np.sin(theta1) * np.cos(phi), np.sin(theta1) * np.sin(phi), np.cos(theta1)]),
-          np.array([np.sin(theta2) * np.cos(phi), np.sin(theta2) * np.sin(phi), np.cos(theta2)]),
-            np.array([np.sin(theta3) * np.cos(phi), np.sin(theta3) * np.sin(phi), np.cos(theta3)])
-          ]
 
-f_list = [f, f, f]
-a_list = [1, 0.5, 0.3]
 
 def array_signal_multiple_source(t, f_list, u_list, a_list, r, n_std=0.1):
     x = 0
@@ -115,76 +109,80 @@ def __compute_beampatern_cpu_np(x, phi=0):
     out /= N_array
     out = np.fft.ifft(out, axis=0)
     output_signals = out.T
-    results = np.mean(np.abs(out) ** 2, axis=0)
+    results = np.sqrt( np.mean(np.abs(out) ** 2, axis=0) )
 
     return results, output_signals, thetas
 
 # compute signal at antenna elements
+u_list = [np.array([np.sin(theta1) * np.cos(phi), np.sin(theta1) * np.sin(phi), np.cos(theta1)]),
+          # np.array([np.sin(theta2) * np.cos(phi), np.sin(theta2) * np.sin(phi), np.cos(theta2)]),
+          #   np.array([np.sin(theta3) * np.cos(phi), np.sin(theta3) * np.sin(phi), np.cos(theta3)])
+          ]
+
+f_list = [f, ]
+a_list = [1, ]
 for i in range(N_array):
     x[i, :] = array_signal_multiple_source(t, f_list, u_list, a_list, r[i])
 
-results, output_signals, thetas = __compute_beampatern_cpu_np(x)
+results1, output_signals1, thetas1 = __compute_beampatern_cpu_np(x)
 
-real_out = output_signals.real
-results = np.array(results)
-maxima = argrelextrema(results, np.greater)[0]
-max_val = results[maxima]
 
-max_val = max_val[:int(len(max_val) / 2)]
-arg_max_val = max_val.argsort()[::-1]
+u_list = [np.array([np.sin(theta2) * np.cos(phi), np.sin(theta2) * np.sin(phi), np.cos(theta2)]),
+          # np.array([np.sin(theta2) * np.cos(phi), np.sin(theta2) * np.sin(phi), np.cos(theta2)]),
+          #   np.array([np.sin(theta3) * np.cos(phi), np.sin(theta3) * np.sin(phi), np.cos(theta3)])
+          ]
 
-sorted_maxima = maxima[arg_max_val]
-sorted_max_val = max_val[arg_max_val]
-print(sorted_maxima)
-print(sorted_max_val)
-
-m = output_signals[sorted_maxima[0]]
-
-plt.plot(output_signals[sorted_maxima[0]].real, label="0")
-plt.plot(output_signals[sorted_maxima[1]].real, label="1")
-# plt.plot(x[0, :].real, label="ant0")
-# plt.plot(x[1, :].real, label="ant1")
-# plt.plot(x[2, :].real, label="ant2")
-# plt.plot(x[3, :].real, label="ant3")
-
-plt.legend()
-plt.figure()
-
-plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
-plt.xlabel("Theta [Degrees]")
-plt.ylabel("DOA Metric")
-plt.grid()
-
-fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-ax.plot(thetas, results)  # MAKE SURE TO USE RADIAN FOR POLAR
-ax.set_theta_zero_location('N')  # make 0 degrees point up
-ax.set_theta_direction(-1)  # increase clockwise
-ax.set_rlabel_position(22.5)  # Move grid labels away from other labels
-
-removed_component_idx = 1
-
-theta_to_remove = thetas[sorted_maxima[removed_component_idx]]
-u = np.array([np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
-signal_to_remove = output_signals[sorted_maxima[removed_component_idx]]
-
-signal_to_remove_at_antenna = np.zeros((N_array, N), dtype=complex)
+f_list = [f, ]
+a_list = [0.2, ]
 for i in range(N_array):
-    signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, f, u, r[i])
+    x[i, :] = array_signal_multiple_source(t, f_list, u_list, a_list, r[i])
 
-filtered_x = x - signal_to_remove_at_antenna
+results2, output_signals2, thetas2 = __compute_beampatern_cpu_np(x)
 
-results, output_signals, thetas = __compute_beampatern_cpu_np(filtered_x)
+
 
 plt.figure()
-plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
-plt.xlabel("Theta [Degrees]")
-plt.ylabel("DOA Metric")
+
+plt.plot(thetas1 * 180 / np.pi, results1, label="60 deg")
+plt.plot(thetas1 * 180 / np.pi, results2, label="120 deg")
+
+plt.xlabel("Theta (Degrees)")
+plt.ylabel("Amplitude")
+plt.legend()
 plt.grid()
 
 fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-ax.plot(thetas, results)  # MAKE SURE TO USE RADIAN FOR POLAR
+ax.plot(thetas1, results1, label="60 deg")
+ax.plot(thetas1, results2, label="120 deg")# MAKE SURE TO USE RADIAN FOR POLAR
 ax.set_theta_zero_location('N')  # make 0 degrees point up
 ax.set_theta_direction(-1)  # increase clockwise
 ax.set_rlabel_position(22.5)  # Move grid labels away from other labels
+plt.legend()
+#
+# removed_component_idx = 1
+#
+# theta_to_remove = thetas[sorted_maxima[removed_component_idx]]
+# u = np.array([np.sin(theta_to_remove) * np.cos(phi), np.sin(theta_to_remove) * np.sin(phi), np.cos(theta_to_remove)])
+# signal_to_remove = output_signals[sorted_maxima[removed_component_idx]]
+#
+# signal_to_remove_at_antenna = np.zeros((N_array, N), dtype=complex)
+# for i in range(N_array):
+#     signal_to_remove_at_antenna[i, :] = compute_phase_shift(signal_to_remove, f, u, r[i])
+#
+# filtered_x = x - signal_to_remove_at_antenna
+#
+# results, output_signals, thetas = __compute_beampatern_cpu_np(filtered_x)
+#
+# plt.figure()
+# plt.plot(thetas * 180 / np.pi, results)  # lets plot angle in degrees
+# plt.xlabel("Theta [Degrees]")
+# plt.ylabel("DOA Metric")
+# plt.grid()
+#
+# fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+# ax.plot(thetas, results)  # MAKE SURE TO USE RADIAN FOR POLAR
+# ax.set_theta_zero_location('N')  # make 0 degrees point up
+# ax.set_theta_direction(-1)  # increase clockwise
+# ax.set_rlabel_position(22.5)  # Move grid labels away from other labels
 
 plt.show()

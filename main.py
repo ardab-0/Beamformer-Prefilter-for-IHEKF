@@ -400,13 +400,16 @@ def main(params):
     print("RMSE: ", utils.rmse(xs[:, :3].T, beacon_pos))
 
     # save trajectory data
-    save_directory = "test_results/simulation_error_vector"
-
-    Path(save_directory).mkdir(parents=True, exist_ok=True)
-    now = datetime.now()
-    filename = now.strftime("%m-%d-%Y_%H-%M-%S") + ".npy"
-    filepath = os.path.join(save_directory, filename)
-    np.save(filepath, error_vect)
+    # save_directory = "test_results/simulation_data2"
+    # filename = f"ihekf_{params.multipath_amplitude}"
+    # Path(save_directory).mkdir(parents=True, exist_ok=True)
+    # filename_xs =  filename + "_xs.npy"
+    # filepath_xs = os.path.join(save_directory, filename_xs)
+    # np.save(filepath_xs, xs)
+    #
+    # filename_trajectory = filename + "_trajectory.npy"
+    # filepath_trajectory = os.path.join(save_directory, filename_trajectory)
+    # np.save(filepath_trajectory, beacon_pos[:3, :])
 
     # save phase differences
     # recorded_phi_differences = np.asarray(recorded_phi_differences)
@@ -424,5 +427,5 @@ def main(params):
 
 
 if __name__ == "__main__":
-    np.random.seed(10)
+    np.random.seed(1)
     main(params=Parameters)

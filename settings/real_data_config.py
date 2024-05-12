@@ -17,7 +17,7 @@ class Parameters:
     i_list = [12, 14, 16]  # antenna number to include at each iteration
 
     visualize_beampatterns = False
-    apply_spatial_filter = False
+    apply_spatial_filter = True
 
     beamformer_type = "delay_and_sum"  # "fourier" , "capon", "music"
     peak_threshold = 0.3  # the amplitude threshold to detect peak in spatial filter
@@ -25,10 +25,10 @@ class Parameters:
 
     cone_angle = 5
 
-    iteration_count = 1 # number of iterations in iterative filter
+    iteration_count = 3 # number of iterations in iterative filter
     data_length_ratio = 1
     step = 60  # subsampling step for raw data at each iteration
-    folder = "./fuer_arda/16"
+    folder = "./fuer_arda/5"
 
 
 VERBOSE = True

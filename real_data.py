@@ -429,13 +429,18 @@ def main(params):
     print("RMSE: ", utils.rmse(xs[:, :3].T, trajectory))
 
     # save trajectory data
-    save_directory = "test_results/realdata_error_vector"
+    recording_number = params.folder.split("/")[-1]
+    save_directory = f"test_results/realdata/{recording_number}"
 
     Path(save_directory).mkdir(parents=True, exist_ok=True)
     now = datetime.now()
-    filename = now.strftime("%m-%d-%Y_%H-%M-%S") + ".npy"
-    filepath = os.path.join(save_directory, filename)
-    # np.save(filepath, error_vect)
+    filename_xs = now.strftime("%m-%d-%Y_%H-%M-%S") + "_xs.npy"
+    filepath_xs = os.path.join(save_directory, filename_xs)
+    np.save(filepath_xs, xs)
+
+    filename_trajectory = now.strftime("%m-%d-%Y_%H-%M-%S") + "_trajectory.npy"
+    filepath_trajectory = os.path.join(save_directory, filename_trajectory)
+    np.save(filepath_trajectory, trajectory)
 
 
 

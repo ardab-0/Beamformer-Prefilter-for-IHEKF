@@ -19,12 +19,12 @@ class Parameters:
 
     use_multipath = True  # True or False
     multipath_count = 3
-    multipath_amplitude = 0.6
+    multipath_amplitude = 0.2
 
-    antenna_kind = "2_6-3-8-d=1"  # "original" or "square_4_4" or "irregular_4_4"
-    i_list = [12, 14, 16]  # antenna number to include at each iteration
+    antenna_kind = "square_8_8"  # "original" or "square_4_4" or "irregular_4_4"
+    i_list = [64]  # antenna number to include at each iteration
 
-    visualize_beampatterns = False
+    visualize_beampatterns = True
     measure_phi_m_directly = False
     apply_spatial_filter = False
 
@@ -41,10 +41,6 @@ class Parameters:
     target_theta_range_deg = 4
     cone_angle = 10
     spatial_filter_initialization_index = 0
-
-
-    # iterative filter
     max_iteration = 3
-
 
 VERBOSE = True

@@ -159,7 +159,7 @@ def generate_antenna_element_positions(kind: str, lmb: float, get_A_full: bool =
              [9 * lmb * d, 0, 5 * lmb * d], [lmb * d, 0, 13 * lmb * d],
              # [0, 0, -10 * lmb * d], [-10 * lmb * d, 0, 0 * lmb * d],
              ]).T
-        A_full = sim.get_A_full(antenna_element_positions)
+        # A_full = sim.get_A_full(antenna_element_positions)
         A_full = np.array([     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0],
